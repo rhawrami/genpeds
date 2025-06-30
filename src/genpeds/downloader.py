@@ -52,7 +52,9 @@ def download_a_file(subject, year):
         return f"Year {year}: 404 - File not found"
     
     zipped_file = os.path.join(relevant_dir, f'{relevant_prefix}_{year}.zip')
-    open(zipped_file, 'wb').write(r.content)
+    # Use context manager to ensure proper file handling
+    with open(zipped_file, 'wb') as f:
+        f.write(r.content)
     
     with zipfile.ZipFile(zipped_file, 'r') as zfile:
         if subject == 'cip':
