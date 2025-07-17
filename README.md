@@ -1,7 +1,7 @@
 # genpeds
 A Python package for working with NCES IPEDS data, particularly for studying trends by gender.
 
-The Integrated Postsecondary Education Data System ([IPEDS](https://nces.ed.gov/ipeds/about-ipeds)), ran by the National Center for Education Statistics ([NCES](https://nces.ed.gov/)), is a collection of surveys annually conducted on a range of subjects, from finances and admissions to enrollment and graduation. All postsecondary institutions that participate in federal student aid financial aid programs are required to participate in these surveys.
+The Integrated Postsecondary Education Data System ([IPEDS](https://nces.ed.gov/ipeds/about-ipeds)), run by the National Center for Education Statistics ([NCES](https://nces.ed.gov/)), is a collection of surveys annually conducted on a range of subjects, from finances and admissions to enrollment and graduation. All postsecondary institutions that participate in federal student aid financial aid programs are required to participate in these surveys.
 
 Per [IPEDS](https://nces.ed.gov/ipeds/about-ipeds):
 > "IPEDS provides basic data needed to describe — and analyze trends in — postsecondary education in the United States, in terms of the numbers of students enrolled, staff employed, dollars expended, and degrees earned. Congress, federal agencies, state governments, education providers, professional associations, private businesses, media, students and parents, and others rely on IPEDS data for this basic information on postsecondary institutions." 
@@ -163,3 +163,33 @@ grad_df = graddat.run(degree_level='bach',
 ```
 
 In the future, the remaining subjects will likely be added to `genpeds`. But just with the already provided subjects, you can study school-level trends for their male and female students, from admissions to completion.
+
+## Development Installation
+
+To set up a development environment for contributing to `genpeds`:
+
+### 1. Create a conda (or other virtual) environment
+```bash
+conda create -n genpeds python -y
+conda activate genpeds
+```
+
+### 2. Install dependencies
+```bash
+pip install -r requirements-dev.txt
+```
+
+### 3. Install genpeds in development mode
+```bash
+pip install -e .
+```
+
+This will install `genpeds` in editable mode, allowing you to make changes to the source code and see them immediately without reinstalling the package.
+
+### 4. Run tests
+```bash
+pytest tests/
+```
+
+This will run all tests in the `tests/` directory to verify that the installation and package functionality are working correctly.
+

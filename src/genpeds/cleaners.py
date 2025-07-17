@@ -133,7 +133,7 @@ def clean_enrollment(enrollment_dir = 'enrollmentdata', student_level = 'undergr
         (lambda y: y in range(2009,2024), 'line in [11,25]')
     ]
     
-    master_df = pd.DataFrame()
+    df_list = []  # Use list instead of empty DataFrame for better performance
 
     for file in sorted_files:
         file_path = os.path.join(enrollment_dir, file)
@@ -181,16 +181,26 @@ def clean_enrollment(enrollment_dir = 'enrollmentdata', student_level = 'undergr
             cols_to_sum = ['totmen', 'totwomen', 'wtmen', 'wtwomen','bkmen', 'bkwomen','hspmen', 'hspwomen','asnmen', 'asnwomen']
         
         students_by_inst = students.groupby('id')[cols_to_sum].sum() # sum full-time and part-time students by school
-        students_by_inst = students_by_inst.eval('totmen_share = totmen / (totmen + totwomen) * 100').reset_index() # male student share
+
+        # Calculate male student share without using eval
+        students_by_inst['totmen_share'] = students_by_inst['totmen'] / (students_by_inst['totmen'] + students_by_inst['totwomen']) * 100 # male student share
+
+        # Resetting index here to be compatible with the previous version,
+        # but I'm not sure why it's necessary.
+        students_by_inst = students_by_inst.reset_index()
+
         students_by_inst['year'] = int(year_num) # get year marker for each set
         students_by_inst['studentlevel'] = student_level # get student level identifier
 
         if 'wtmen' in students_by_inst.columns:
             for attr in ['wt', 'bk', 'hsp', 'asn']:
-                eval_str = f'tot{attr}_share = ({attr}men + {attr}women) / (totmen + totwomen) * 100' # race share breakdowns
-                students_by_inst = students_by_inst.eval(eval_str)
+                # Calculate race share breakdowns without using eval
+                students_by_inst[f'tot{attr}_share'] = (students_by_inst[f'{attr}men'] + students_by_inst[f'{attr}women']) / (students_by_inst['totmen'] + students_by_inst['totwomen']) * 100
 
-        master_df = pd.concat([master_df, students_by_inst], ignore_index=True)
+        df_list.append(students_by_inst)
+
+    # Doing all the concatenations at once instead of one by one
+    master_df = pd.concat(df_list, ignore_index=True)
 
     return master_df
 
