@@ -1,6 +1,8 @@
 import os
 import re
 import warnings
+from typing import Dict
+
 from bs4 import BeautifulSoup
 import pandas as pd
 import numpy as np
@@ -8,10 +10,11 @@ import us
 
 from genpeds.config import VARIABLE_RENAME
 
-def clean_characteristics(characteristics_dir = 'characteristicsdata') -> pd.DataFrame:
-    '''cleans institution characteristics data and returns complete characteristics data
+def clean_characteristics(characteristics_dir: str = 'characteristicsdata') -> pd.DataFrame:
+    '''
+    cleans institution characteristics data and returns complete characteristics data
 
-    :characteristics_dir:        directory where raw enrollment data is located
+    :param characteristics_dir: directory where raw enrollment data is located
     '''
     warnings.filterwarnings('ignore', category=FutureWarning)
     sorted_files = sorted(os.listdir(characteristics_dir))
@@ -51,10 +54,11 @@ def clean_characteristics(characteristics_dir = 'characteristicsdata') -> pd.Dat
     return master_df
 
 
-def clean_admissions(admissions_dir = 'admissionsdata') -> pd.DataFrame:
-    '''cleans yearly admissions data and returns complete admissions data
+def clean_admissions(admissions_dir: str = 'admissionsdata') -> pd.DataFrame:
+    '''
+    cleans yearly admissions data and returns complete admissions data
     
-    :admissions_dir:        directory where raw admissions data is located
+    :param admissions_dir: directory where raw admissions data is located
     '''
     warnings.filterwarnings('ignore', category=FutureWarning)
     sorted_files = sorted(os.listdir(admissions_dir)) # unnecessary, but helps with error checking
@@ -114,11 +118,13 @@ def clean_admissions(admissions_dir = 'admissionsdata') -> pd.DataFrame:
     return admissions_df
 
 
-def clean_enrollment(enrollment_dir = 'enrollmentdata', student_level = 'undergrad') -> pd.DataFrame:
-    '''cleans yearly enrollment data and returns complete student enrollment data
+def clean_enrollment(enrollment_dir: str = 'enrollmentdata', 
+                     student_level: str = 'undergrad') -> pd.DataFrame:
+    '''
+    cleans yearly enrollment data and returns complete student enrollment data
 
-    :enrollment_dir:        directory where raw enrollment data is located
-    :student_level:        level of enrollment; options include ['undergrad', 'grad']
+    :enrollment_dir: directory where raw enrollment data is located
+    :student_level: level of enrollment; options include ['undergrad', 'grad']
     '''
     warnings.filterwarnings('ignore', category=FutureWarning)
     sorted_files = sorted(os.listdir(enrollment_dir)) # unnecessary, but helps with error checking
@@ -133,7 +139,7 @@ def clean_enrollment(enrollment_dir = 'enrollmentdata', student_level = 'undergr
         (lambda y: y in range(2009,2024), 'line in [11,25]')
     ]
     
-    df_list = []  # Use list instead of empty DataFrame for better performance
+    df_list = []  
 
     for file in sorted_files:
         file_path = os.path.join(enrollment_dir, file)
@@ -199,17 +205,19 @@ def clean_enrollment(enrollment_dir = 'enrollmentdata', student_level = 'undergr
 
         df_list.append(students_by_inst)
 
-    # Doing all the concatenations at once instead of one by one
+    
     master_df = pd.concat(df_list, ignore_index=True)
 
     return master_df
 
 
-def clean_completion(completion_dir = 'completiondata', level = 'bach') -> pd.DataFrame:
-    '''cleans yearly completion data and returns complete completions data
+def clean_completion(completion_dir: str = 'completiondata', 
+                     level: str = 'bach') -> pd.DataFrame:
+    '''
+    cleans yearly completion data and returns complete completions data
 
-    :completion_dir:        directory where raw completion data is located
-    :level:                 level of degree, options include ['assc', 'bach', 'mast', 'doct']
+    :param completion_dir: directory where raw completion data is located
+    :param level: level of degree, options include ['assc', 'bach', 'mast', 'doct']
     '''
     warnings.filterwarnings('ignore', category=FutureWarning)
     sorted_files = sorted(os.listdir(completion_dir)) # unnecessary, but helps with error checking
@@ -270,10 +278,11 @@ def clean_completion(completion_dir = 'completiondata', level = 'bach') -> pd.Da
     return master_df
 
 
-def clean_cip_html(file_path):
-    '''returns dict of CIP subject code:label pairs for a given year's CIP dictionary html.
+def clean_cip_html(file_path: str) -> Dict[str,str]:
+    '''
+    returns dict of CIP subject code:label pairs for a given year's CIP dictionary html.
     
-    :file_path: string path to CIP data dictionary html
+    :param file_path: string path to CIP data dictionary html
     '''
     with open(file_path) as filehandle:
         soup = BeautifulSoup(filehandle, 'html.parser')
@@ -292,10 +301,11 @@ def clean_cip_html(file_path):
         return label_dict
 
 
-def clean_cip(cip_codes_dir = 'cipdata') -> pd.DataFrame:
-    '''cleans yearly CIP data and returns full dataframe
+def clean_cip(cip_codes_dir: str = 'cipdata') -> pd.DataFrame:
+    '''
+    cleans yearly CIP data and returns full dataframe
 
-    :cip_codes_dir: directory where raw CIP data is located
+    :param cip_codes_dir: directory where raw CIP data is located
     '''
     warnings.filterwarnings('ignore', category=FutureWarning)
     warnings.filterwarnings('ignore', category=UserWarning)
@@ -323,11 +333,13 @@ def clean_cip(cip_codes_dir = 'cipdata') -> pd.DataFrame:
     return master_df
 
 
-def clean_graduation(graduation_dir = 'graduationdata', deg_level='bach') -> pd.DataFrame:
-    '''cleans yearly graduation data and returns complete graduation data
+def clean_graduation(graduation_dir: str = 'graduationdata', 
+                     deg_level: str = 'bach') -> pd.DataFrame:
+    '''
+    cleans yearly graduation data and returns complete graduation data
 
-    :graduation_dir:        directory where raw completion data is located
-    :deg_level:        degree level; options include ['assc', 'bach']
+    :graduation_dir: directory where raw completion data is located
+    :deg_level: degree level; options include ['assc', 'bach']
     '''
     warnings.filterwarnings('ignore', category=FutureWarning)
     sorted_files = sorted(os.listdir(graduation_dir)) # unnecessary, but helps with error checking

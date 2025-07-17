@@ -1,11 +1,13 @@
-from genpeds.downloader import scrape_ipeds_data
 import argparse
 
-'''simple and doesn't handle many errors at the moment,
-but it'll do for now.'''
+from genpeds.downloader import scrape_ipeds_data
 
-def parse_years(year_str):
-    '''parse year argument
+# simple and doesn't handle many errors at the moment,
+# but it'll do for now.
+
+def parse_years(year_str: str ):
+    '''
+    parse year argument
     
     years take:
     1. range, ie. 2001-2023
@@ -24,6 +26,7 @@ def parse_years(year_str):
         yrs_iter = [int(yr) for yr in year_str]
     
     return yrs_iter
+
 
 def main():
     parser = argparse.ArgumentParser('genpeds', description='NCES IPEDS subject-data scraper')

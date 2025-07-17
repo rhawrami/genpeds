@@ -1,47 +1,59 @@
+import shutil
+from abc import ABC, abstractmethod
+from typing import Dict, Optional, Tuple, List, Union
+
+import pandas as pd
+
 from genpeds.downloader import scrape_ipeds_data
 from genpeds.cleaners import CLEANERS
 from genpeds.config import DATASETS, VARIABLE_DICT
-import pandas as pd
-
-import shutil
-from abc import ABC, abstractmethod
 
 class IPDS(ABC):
     subject = None
     
-    def __init__(self, year_range=None):
+    def __init__(self, 
+                 year_range: Optional[Union[Tuple[int,int], List[int], int]] = None):
         self.year_range = year_range # year range by user
         self.available_years = DATASETS[self.subject]['years_available']
         self.variable_dict = VARIABLE_DICT[self.subject]
 
-    def get_description(self):
+
+    def get_description(self) -> str:
         '''returns description of the subject data.'''
         return DATASETS[self.subject]['description']
     
-    def get_available_years(self):
+
+    def get_available_years(self) -> Tuple[int,int]:
         '''returns available years for a subject's data.'''
         return self.available_years
     
-    def get_available_vars(self):
+
+    def get_available_vars(self) -> Dict[str,str]:
         '''returns dict of available variables for a subject and their descriptions.'''
         return self.variable_dict
     
-    def lookup_var(self, var=''):
+
+    def lookup_var(self, var='') -> str:
         '''returns variable description.'''
         return self.variable_dict[var]
 
-    def scrape(self, see_progress=False):
-        '''downloads NCES IPEDS data to disk on specified years for a defined subject.
+
+    def scrape(self, 
+               see_progress: bool = False) -> None:
+        '''
+        downloads NCES IPEDS data to disk on specified years for a defined subject.
         
         :param see_progress::
             (bool) prints completion statement for extraction of each year's data. If False, no messages printed.
         '''
         scrape_ipeds_data(subject=self.subject, year_range=self.year_range, see_progress=see_progress)
 
+
     @abstractmethod
     def clean(self):
         '''clean the data'''
         pass
+
 
     @abstractmethod
     def run(self):
@@ -53,7 +65,8 @@ class Characteristics(IPDS):
     '''IPEDS Characteristics'''
     subject = 'characteristics'
 
-    def __init__(self, year_range=None):
+    def __init__(self, 
+                 year_range: Optional[Union[Tuple[int,int], List[int], int]] = None):
         '''IPEDS Characteristics data.
         
         :param year_range::
@@ -86,8 +99,12 @@ class Characteristics(IPDS):
         '''
         super().__init__(year_range)
 
-    def clean(self, char_dir='characteristicsdata', rm_disk=False) -> pd.DataFrame:
-        '''cleans downloaded Characteristics data, returns Pandas Dataframe.
+
+    def clean(self, 
+              char_dir: str = 'characteristicsdata', 
+              rm_disk: bool = False) -> pd.DataFrame:
+        '''
+        cleans downloaded Characteristics data, returns Pandas Dataframe.
         
         :param char_dir::
           directory where raw Charactetistics data is located; defaults to default download dir name.
@@ -99,8 +116,12 @@ class Characteristics(IPDS):
             shutil.rmtree(char_dir)
         return df
     
-    def run(self, see_progress=False, rm_disk=False) -> pd.DataFrame:
-        '''scrapes and cleans IPEDS Characteristics data; returns Pandas Dataframe.
+
+    def run(self, 
+            see_progress: bool = False, 
+            rm_disk: bool = False) -> pd.DataFrame:
+        '''
+        scrapes and cleans IPEDS Characteristics data; returns Pandas Dataframe.
         
         :param see_progress::
         (bool) When True, prints successful download confirmation for each year's data. If False, no messages printed.
@@ -117,7 +138,8 @@ class Admissions(IPDS):
     '''IPEDS Admissions'''
     subject = 'admissions'
 
-    def __init__(self, year_range=None):
+    def __init__(self, 
+                 year_range: Optional[Union[Tuple[int,int], List[int], int]] = None):
         '''IPEDS Admissions data.
         
         :param year_range::
@@ -149,8 +171,12 @@ class Admissions(IPDS):
         '''
         super().__init__(year_range)
 
-    def clean(self, admit_dir='admissionsdata', rm_disk=False) -> pd.DataFrame:
-        '''cleans downloaded Admissions data, returns Pandas Dataframe.
+
+    def clean(self, 
+              admit_dir: str = 'admissionsdata', 
+              rm_disk: bool = False) -> pd.DataFrame:
+        '''
+        cleans downloaded Admissions data, returns Pandas Dataframe.
         
         :param admit_dir::
           directory where raw Admissions data is located; defaults to default download dir name.
@@ -161,6 +187,7 @@ class Admissions(IPDS):
         if rm_disk:
             shutil.rmtree(admit_dir) # removes data from disk
         return df
+    
     
     def run(self, see_progress=False, merge_with_char=False, rm_disk=False) -> pd.DataFrame:
         '''scrapes and cleans Admissions data; returns Pandas Dataframe.
@@ -189,8 +216,10 @@ class Enrollment(IPDS):
     '''IPEDS Enrollment'''
     subject = 'enrollment'
 
-    def __init__(self, year_range=None):
-        '''IPEDS Enrollment data.
+    def __init__(self, 
+                 year_range: Optional[Union[Tuple[int,int], List[int], int]] = None):
+        '''
+        IPEDS Enrollment data.
         
         :param year_range::
           tuple of inclusive year integers (indicates a range), iterable of year integers (indicates group of individual years), or single year to pull data from.
@@ -221,8 +250,13 @@ class Enrollment(IPDS):
         '''
         super().__init__(year_range)
 
-    def clean(self, student_level='undergrad', enroll_dir='enrollmentdata', rm_disk=False) -> pd.DataFrame:
-        '''cleans downloaded Fall Enrollment data, returns Pandas Dataframe.
+
+    def clean(self, 
+              student_level: str = 'undergrad', 
+              enroll_dir = 'enrollmentdata', 
+              rm_disk = False) -> pd.DataFrame:
+        '''
+        cleans downloaded Fall Enrollment data, returns Pandas Dataframe.
         
         :param student_level::
          level of student enrollment; options include ['undergrad', 'grad'].
@@ -236,8 +270,14 @@ class Enrollment(IPDS):
             shutil.rmtree(enroll_dir)
         return df
     
-    def run(self, student_level='undergrad', see_progress=False, merge_with_char=False, rm_disk=False) -> pd.DataFrame:
-        '''scrapes and cleans IPEDS Fall Enrollment data; returns Pandas Dataframe.
+
+    def run(self, 
+            student_level: str = 'undergrad', 
+            see_progress: bool = False, 
+            merge_with_char: bool = False, 
+            rm_disk: bool = False) -> pd.DataFrame:
+        '''
+        scrapes and cleans IPEDS Fall Enrollment data; returns Pandas Dataframe.
         
         :param student_level::
          level of student enrollment; options include ['undergrad', 'grad'].
@@ -266,8 +306,10 @@ class Cip(IPDS):
     '''CIP Codes'''
     subject = 'cip'
 
-    def __init__(self, year_range=(1984,2023)):
-        '''IPEDS CIP Codes data.
+    def __init__(self, 
+                 year_range: Optional[Union[Tuple[int,int], List[int], int]] = (1984,2023)):
+        '''
+        IPEDS CIP Codes data.
 
         :param year_range::
           tuple of inclusive year integers (indicates a range), iterable of year integers (indicates group of individual years), or single year to pull data from.
@@ -276,8 +318,12 @@ class Cip(IPDS):
         '''
         super().__init__(year_range)
 
-    def clean(self, cip_dir='cipdata', rm_disk=False) -> pd.DataFrame:
-        '''cleans downloaded CIP data, returns Pandas Dataframe.
+
+    def clean(self, 
+              cip_dir: str = 'cipdata', 
+              rm_disk: bool = False) -> pd.DataFrame:
+        '''
+        cleans downloaded CIP data, returns Pandas Dataframe.
         
         :param cip_dir::
           directory where raw CIP data is located; defaults to default download dir name.
@@ -289,8 +335,12 @@ class Cip(IPDS):
             shutil.rmtree(cip_dir)
         return df
     
-    def run(self, see_progress=False, rm_disk=False) -> pd.DataFrame:
-        '''scrapes and cleans IPEDS CIP data; returns Pandas DataFrame.
+
+    def run(self, 
+            see_progress: bool = False, 
+            rm_disk: bool = False) -> pd.DataFrame:
+        '''
+        scrapes and cleans IPEDS CIP data; returns Pandas DataFrame.
 
         :param see_progress::
         (bool) When True, prints successful download confirmation for each year's data. If False, no messages printed.
@@ -307,8 +357,10 @@ class Completion(IPDS):
     '''IPEDS Completion'''
     subject = 'completion'
 
-    def __init__(self, year_range=(1984,2023)):
-        '''IPEDS Completion data.
+    def __init__(self, 
+                 year_range: Optional[Union[Tuple[int,int], List[int], int]] = (1984,2023)):
+        '''
+        IPEDS Completion data.
         
         :param year_range::
           tuple of inclusive year integers (indicates a range), iterable of year integers (indicates group of individual years), or single year to pull data from.
@@ -339,8 +391,13 @@ class Completion(IPDS):
         '''
         super().__init__(year_range)
 
-    def clean(self, degree_level='bach', complete_dir='completiondata', rm_disk=False) -> pd.DataFrame:
-        '''cleans downloaded Completion data, returns Pandas Dataframe.
+
+    def clean(self, 
+              degree_level: str = 'bach', 
+              complete_dir: str = 'completiondata', 
+              rm_disk: bool = False) -> pd.DataFrame:
+        '''
+        cleans downloaded Completion data, returns Pandas Dataframe.
         
         :param degree_level::
          level of student degree completion; options include ['assc', 'bach', 'mast', 'doct'].
@@ -354,7 +411,13 @@ class Completion(IPDS):
             shutil.rmtree(complete_dir)
         return df
     
-    def run(self, degree_level='bach', see_progress=False, merge_with_char=False, get_cip_codes=True, rm_disk=False) -> pd.DataFrame:
+
+    def run(self, 
+            degree_level: str = 'bach', 
+            see_progress: bool = False, 
+            merge_with_char: bool = False, 
+            get_cip_codes: bool = True, 
+            rm_disk: bool = False) -> pd.DataFrame:
         '''scrapes and cleans IPEDS Completion data; returns Pandas Dataframe.
         
         :param degree_level::
@@ -390,8 +453,10 @@ class Graduation(IPDS):
     '''IPEDS Graduation'''
     subject = 'graduation'
 
-    def __init__(self, year_range=(1984,2023)):
-        '''IPEDS Graduation data.
+    def __init__(self, 
+                 year_range: Optional[Union[Tuple[int,int], List[int], int]] = (1984,2023)):
+        '''
+        IPEDS Graduation data.
         
         :param year_range::
           tuple of inclusive year integers (indicates a range), iterable of year integers (indicates group of individual years), or single year to pull data from.
@@ -422,8 +487,13 @@ class Graduation(IPDS):
         '''
         super().__init__(year_range)
 
-    def clean(self, degree_level='bach', grad_dir='graduationdata', rm_disk=False) -> pd.DataFrame:
-        '''cleans downloaded undergraduate Graduation data, returns Pandas Dataframe.
+
+    def clean(self, 
+              degree_level: str = 'bach', 
+              grad_dir: str = 'graduationdata', 
+              rm_disk: bool = False) -> pd.DataFrame:
+        '''
+        cleans downloaded undergraduate Graduation data, returns Pandas Dataframe.
         
         :param degree_level::
          level of graduate; options include ['assc', 'bach'].
@@ -437,8 +507,14 @@ class Graduation(IPDS):
             shutil.rmtree(grad_dir)
         return df
     
-    def run(self, degree_level='bach', see_progress=False, merge_with_char=False, rm_disk=False) -> pd.DataFrame:
-        '''scrapes and cleans IPEDS Graduation data; returns Pandas Dataframe.
+
+    def run(self, 
+            degree_level: str = 'bach', 
+            see_progress: bool = False, 
+            merge_with_char: bool = False, 
+            rm_disk: bool = False) -> pd.DataFrame:
+        '''
+        scrapes and cleans IPEDS Graduation data; returns Pandas Dataframe.
         
         :param degree_level::
          level of graduate; options include ['assc', 'bach'].

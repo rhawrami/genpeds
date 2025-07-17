@@ -1,15 +1,20 @@
 import concurrent.futures
 import time
 import random
-import requests
 import zipfile
 import os
 import warnings
 import re
+from typing import Optional
+
+import requests
+
 from genpeds.config import DATASETS
 
-def get_file_endpoint(subject, year):
-    '''returns endpoint for a given subject in a given year.
+def get_file_endpoint(subject: str, 
+                      year: int) -> Optional[str]:
+    '''
+    returns endpoint for a given subject in a given year.
     
     :param year: year for file; available years vary by subject.
     :param subject: subject.
@@ -21,9 +26,9 @@ def get_file_endpoint(subject, year):
     for cond,frmt in format_rules:
         if cond(year):
             yr_format = frmt.format(year=year, 
-                                        lag0=str(lag0), 
-                                        lag1 = str(lag1), 
-                                        lead1 = str(lead1))
+                                    lag0=str(lag0), 
+                                    lag1 = str(lag1), 
+                                    lead1 = str(lead1))
             endpoint = endpoint_template.format(yr_format) # formatted endpoint
             break
     else:
@@ -32,8 +37,11 @@ def get_file_endpoint(subject, year):
     
     return endpoint
 
-def download_a_file(subject, year):
-    '''downloads an IPEDS subject-year data file.
+
+def download_a_file(subject: str, 
+                    year: int) -> Optional[str]:
+    '''
+    downloads an IPEDS subject-year data file.
 
     :param year: year for file; available years vary by subject.
     :param subject: subject.
@@ -52,7 +60,7 @@ def download_a_file(subject, year):
         return f"Year {year}: 404 - File not found"
     
     zipped_file = os.path.join(relevant_dir, f'{relevant_prefix}_{year}.zip')
-    # Use context manager to ensure proper file handling
+    
     with open(zipped_file, 'wb') as f:
         f.write(r.content)
     
@@ -82,8 +90,11 @@ def download_a_file(subject, year):
     return(f'IPEDS {subject.title()} ({year}) successfully downloaded and extracted')
 
 
-def scrape_ipeds_data(subject='characteristics', year_range = None, see_progress = True):
-    '''downloads NCES IPEDS data on specified years for a defined subject.
+def scrape_ipeds_data(subject: str = 'characteristics', 
+                      year_range: Optional[str] = None, 
+                      see_progress: bool = True) -> None:
+    '''
+    downloads NCES IPEDS data on specified years for a defined subject.
     
     :param subject: string identifying which subject data to download. The subjects available are:
      ['characteristics', 'admissions', 'enrollment', 'completion', 'cip', 'graduation']
