@@ -1,11 +1,13 @@
-from genpeds.cleaners import CLEANERS
-from genpeds import scrape_ipeds_data
-from genpeds.config import VARIABLE_DICT
-import pandas as pd
 import os
 import glob
 import shutil
+
+import pandas as pd
 import pytest
+
+from genpeds.cleaners import CLEANERS
+from genpeds import scrape_ipeds_data
+from genpeds.config import VARIABLE_DICT
 
 def download_data_for_test():
     '''downloads data for test, assuming not already downloaded'''

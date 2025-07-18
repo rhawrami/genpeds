@@ -111,7 +111,7 @@ class Characteristics(IPDS):
         :param rm_disk::
           removes downloaded Characteristics data from disk, after cleaning.
         '''
-        df = CLEANERS[self.subject](char_dir)
+        df = CLEANERS[self.subject](char_dir,self.year_range)
         if rm_disk:
             shutil.rmtree(char_dir)
         return df
@@ -183,7 +183,8 @@ class Admissions(IPDS):
         :param rm_disk::
           removes downloaded Admissions data from disk, after cleaning.
         '''
-        df = CLEANERS[self.subject](admissions_dir=admit_dir)
+        df = CLEANERS[self.subject](admissions_dir=admit_dir,
+                                    year_range=self.year_range)
         if rm_disk:
             shutil.rmtree(admit_dir) # removes data from disk
         return df
@@ -265,7 +266,9 @@ class Enrollment(IPDS):
         :param rm_disk::
           removes downloaded Enrollment data from disk, after cleaning.
         '''
-        df = CLEANERS[self.subject](enrollment_dir=enroll_dir, student_level=student_level)
+        df = CLEANERS[self.subject](enrollment_dir=enroll_dir, 
+                                    student_level=student_level,
+                                    year_range=self.year_range)
         if rm_disk:
             shutil.rmtree(enroll_dir)
         return df
@@ -330,7 +333,8 @@ class Cip(IPDS):
         :param rm_disk::
           removes downloaded CIP data from disk, after cleaning.
         '''
-        df = CLEANERS[self.subject](cip_codes_dir=cip_dir)
+        df = CLEANERS[self.subject](cip_codes_dir=cip_dir,
+                                    year_range=self.year_range)
         if rm_disk:
             shutil.rmtree(cip_dir)
         return df
@@ -406,7 +410,9 @@ class Completion(IPDS):
         :param rm_disk::
           removes downloaded Completion data from disk, after cleaning.
         '''
-        df = CLEANERS[self.subject](completion_dir=complete_dir, level=degree_level)
+        df = CLEANERS[self.subject](completion_dir=complete_dir, 
+                                    level=degree_level,
+                                    year_range=self.year_range)
         if rm_disk:
             shutil.rmtree(complete_dir)
         return df
@@ -502,7 +508,9 @@ class Graduation(IPDS):
         :param rm_disk::
           removes downloaded Graduation data from disk, after cleaning.
         '''
-        df = CLEANERS[self.subject](graduation_dir=grad_dir, deg_level=degree_level)
+        df = CLEANERS[self.subject](graduation_dir=grad_dir, 
+                                    deg_level=degree_level,
+                                    year_range=self.year_range)
         if rm_disk:
             shutil.rmtree(grad_dir)
         return df
@@ -537,5 +545,3 @@ class Graduation(IPDS):
                 char_df = Characteristics(year_range=self.year_range).run(see_progress=see_progress, rm_disk=False)
             df = df.merge(char_df, on=['id', 'year'])
         return df
-    
-    

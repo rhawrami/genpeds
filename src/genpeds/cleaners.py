@@ -1,7 +1,7 @@
 import os
 import re
 import warnings
-from typing import Dict
+from typing import Dict, Optional, List, Tuple, Union
 
 from bs4 import BeautifulSoup
 import pandas as pd
@@ -9,12 +9,16 @@ import numpy as np
 import us 
 
 from genpeds.config import VARIABLE_RENAME
+from genpeds.downloader import get_year_iter
 
-def clean_characteristics(characteristics_dir: str = 'characteristicsdata') -> pd.DataFrame:
+
+def clean_characteristics(characteristics_dir: str = 'characteristicsdata',
+                          year_range: Optional[Union[Tuple[int,int], List[int], int]] = None) -> pd.DataFrame:
     '''
     cleans institution characteristics data and returns complete characteristics data
 
     :param characteristics_dir: directory where raw enrollment data is located
+    :year_range: range of years to clean data from. This is in case that you have more data than you want to actually clean and return
     '''
     warnings.filterwarnings('ignore', category=FutureWarning)
     sorted_files = sorted(os.listdir(characteristics_dir))
@@ -30,9 +34,16 @@ def clean_characteristics(characteristics_dir: str = 'characteristicsdata') -> p
     }
     for file in sorted_files:
         file_path = os.path.join(characteristics_dir, file)
+        year_num = re.split(r'_|\.', f'{file}')[1]
+        
+        if year_range:
+            year_iter = get_year_iter(subject='characteristics',
+                                      year_range=year_range)
+            if int(year_num) not in year_iter:
+                continue
+
         df = pd.read_csv(file_path, dtype=dtypes, encoding_errors='replace', low_memory=False)
         df = df.rename(str.lower, axis='columns')
-        year_num = re.split(r'_|\.', f'{file}')[1]
         
         if int(year_num) > 1998:
             if int(year_num) > 2008:
@@ -54,11 +65,13 @@ def clean_characteristics(characteristics_dir: str = 'characteristicsdata') -> p
     return master_df
 
 
-def clean_admissions(admissions_dir: str = 'admissionsdata') -> pd.DataFrame:
+def clean_admissions(admissions_dir: str = 'admissionsdata',
+                     year_range: Optional[Union[Tuple[int,int], List[int], int]] = None) -> pd.DataFrame:
     '''
     cleans yearly admissions data and returns complete admissions data
     
     :param admissions_dir: directory where raw admissions data is located
+    :year_range: range of years to clean data from. This is in case that you have more data than you want to actually clean and return
     '''
     warnings.filterwarnings('ignore', category=FutureWarning)
     sorted_files = sorted(os.listdir(admissions_dir)) # unnecessary, but helps with error checking
@@ -68,10 +81,17 @@ def clean_admissions(admissions_dir: str = 'admissionsdata') -> pd.DataFrame:
     
     for file in sorted_files:
         file_path = os.path.join(admissions_dir, file)
+        year_num = re.split(r'_|\.', f'{file}')[1]
+        
+        if year_range:
+            year_iter = get_year_iter(subject='admissions',
+                                      year_range=year_range)
+            if int(year_num) not in year_iter:
+                continue
+
         df = pd.read_csv(file_path, dtype=str) # read in df
         df = df.rename(str.lower, axis='columns') # some df's have all uppercase, some have all lowercase
         df.columns = df.columns.str.strip() # some column names have right spaces
-        year_num = re.split(r'_|\.', f'{file}')[1]
         
         cols_to_filter = [col for col in rename_dict.keys() if col in df.columns] # cols to filter per year
         df_filtered = df.reindex(columns=cols_to_filter)
@@ -119,12 +139,14 @@ def clean_admissions(admissions_dir: str = 'admissionsdata') -> pd.DataFrame:
 
 
 def clean_enrollment(enrollment_dir: str = 'enrollmentdata', 
-                     student_level: str = 'undergrad') -> pd.DataFrame:
+                     student_level: str = 'undergrad',
+                     year_range: Optional[Union[Tuple[int,int], List[int], int]] = None) -> pd.DataFrame:
     '''
     cleans yearly enrollment data and returns complete student enrollment data
 
     :enrollment_dir: directory where raw enrollment data is located
     :student_level: level of enrollment; options include ['undergrad', 'grad']
+    :year_range: range of years to clean data from. This is in case that you have more data than you want to actually clean and return
     '''
     warnings.filterwarnings('ignore', category=FutureWarning)
     sorted_files = sorted(os.listdir(enrollment_dir)) # unnecessary, but helps with error checking
@@ -143,9 +165,16 @@ def clean_enrollment(enrollment_dir: str = 'enrollmentdata',
 
     for file in sorted_files:
         file_path = os.path.join(enrollment_dir, file)
+        year_num = re.split(r'_|\.', f'{file}')[1]
+        
+        if year_range:
+            year_iter = get_year_iter(subject='enrollment',
+                                      year_range=year_range)
+            if int(year_num) not in year_iter:
+                continue
+
         df = pd.read_csv(file_path, dtype=str) # read in df
         df = df.rename(str.lower, axis='columns') # some df's have all uppercase, some have all lowercase
-        year_num = re.split(r'_|\.', f'{file}')[1]
 
         if all(col in df.columns for col in ['efrace10', 'eftotlm']):
             cols_to_filter = [col for col in rename_dict.keys() if 
@@ -212,12 +241,14 @@ def clean_enrollment(enrollment_dir: str = 'enrollmentdata',
 
 
 def clean_completion(completion_dir: str = 'completiondata', 
-                     level: str = 'bach') -> pd.DataFrame:
+                     level: str = 'bach',
+                     year_range: Optional[Union[Tuple[int,int], List[int], int]] = None) -> pd.DataFrame:
     '''
     cleans yearly completion data and returns complete completions data
 
     :param completion_dir: directory where raw completion data is located
     :param level: level of degree, options include ['assc', 'bach', 'mast', 'doct']
+    :year_range: range of years to clean data from. This is in case that you have more data than you want to actually clean and return
     '''
     warnings.filterwarnings('ignore', category=FutureWarning)
     sorted_files = sorted(os.listdir(completion_dir)) # unnecessary, but helps with error checking
@@ -235,9 +266,16 @@ def clean_completion(completion_dir: str = 'completiondata',
 
     for file in sorted_files:
         file_path = os.path.join(completion_dir, file)
+        year_num = re.split(r'_|\.', f'{file}')[1]
+        
+        if year_range:
+            year_iter = get_year_iter(subject='completion',
+                                      year_range=year_range)
+            if int(year_num) not in year_iter:
+                continue
+        
         df = pd.read_csv(file_path, dtype=str) # read in df
         df = df.rename(str.lower, axis='columns') # some df's have all uppercase, some have all lowercase
-        year_num = re.split(r'_|\.', f'{file}')[1]
         
         if all(col in df.columns for col in ['crace10', 'ctotalm']):
             cols_to_filter = [col for col in rename_dict.keys() if 
@@ -283,6 +321,7 @@ def clean_cip_html(file_path: str) -> Dict[str,str]:
     returns dict of CIP subject code:label pairs for a given year's CIP dictionary html.
     
     :param file_path: string path to CIP data dictionary html
+    :year_range: range of years to clean data from. This is in case that you have more data than you want to actually clean and return
     '''
     with open(file_path) as filehandle:
         soup = BeautifulSoup(filehandle, 'html.parser')
@@ -301,11 +340,13 @@ def clean_cip_html(file_path: str) -> Dict[str,str]:
         return label_dict
 
 
-def clean_cip(cip_codes_dir: str = 'cipdata') -> pd.DataFrame:
+def clean_cip(cip_codes_dir: str = 'cipdata',
+              year_range: Optional[Union[Tuple[int,int], List[int], int]] = None) -> pd.DataFrame:
     '''
     cleans yearly CIP data and returns full dataframe
 
     :param cip_codes_dir: directory where raw CIP data is located
+    :year_range: range of years to clean data from. This is in case that you have more data than you want to actually clean and return
     '''
     warnings.filterwarnings('ignore', category=FutureWarning)
     warnings.filterwarnings('ignore', category=UserWarning)
@@ -315,6 +356,13 @@ def clean_cip(cip_codes_dir: str = 'cipdata') -> pd.DataFrame:
     for file in sorted_files:
         file_path = os.path.join(cip_codes_dir, file)
         year_num = re.split(r'_|\.', f'{file}')[1]
+        
+        if year_range:
+            year_iter = get_year_iter(subject='cip',
+                                      year_range=year_range)
+            if int(year_num) not in year_iter:
+                continue
+        
         ext = re.split(r'_|\.', f'{file}')[2]
         if ext == 'html':
             html_dict = clean_cip_html(file_path=file_path)
@@ -334,12 +382,14 @@ def clean_cip(cip_codes_dir: str = 'cipdata') -> pd.DataFrame:
 
 
 def clean_graduation(graduation_dir: str = 'graduationdata', 
-                     deg_level: str = 'bach') -> pd.DataFrame:
+                     deg_level: str = 'bach',
+                     year_range: Optional[Union[Tuple[int,int], List[int], int]] = None) -> pd.DataFrame:
     '''
     cleans yearly graduation data and returns complete graduation data
 
     :graduation_dir: directory where raw completion data is located
     :deg_level: degree level; options include ['assc', 'bach']
+    :year_range: range of years to clean data from. This is in case that you have more data than you want to actually clean and return
     '''
     warnings.filterwarnings('ignore', category=FutureWarning)
     sorted_files = sorted(os.listdir(graduation_dir)) # unnecessary, but helps with error checking
@@ -348,9 +398,16 @@ def clean_graduation(graduation_dir: str = 'graduationdata',
 
     for file in sorted_files:
         file_path = os.path.join(graduation_dir, file)
+        year_num = re.split(r'_|\.', f'{file}')[1]
+        
+        if year_range:
+            year_iter = get_year_iter(subject='graduation',
+                                      year_range=year_range)
+            if int(year_num) not in year_iter:
+                continue
+        
         df = pd.read_csv(file_path, dtype=str) # read in df
         df = df.rename(str.lower, axis='columns') # some df's have all uppercase, some have all lowercase
-        year_num = re.split(r'_|\.', f'{file}')[1]
 
         if all(col in df.columns for col in ['grrace10', 'grtotlm']):
             cols_to_filter = [col for col in rename_dict.keys() if 

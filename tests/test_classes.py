@@ -1,8 +1,10 @@
-from genpeds import Characteristics, Admissions, Enrollment, Completion, Graduation
-from genpeds.config import DATASETS
 import os
-import pandas as pd
+
 import pytest
+import pandas as pd
+
+
+from genpeds import Characteristics, Admissions, Enrollment, Completion, Graduation
 
 # classes to test
 # - Characteristics
@@ -21,6 +23,7 @@ import pytest
 # unique methods to test
 # .clean()
 # .run()
+
 
 def get_iter_range(years):
     '''returns range of years depending on object type.'''

@@ -1,7 +1,9 @@
-from genpeds import scrape_ipeds_data
 import os
 import shutil
+
 import pytest
+
+from genpeds import scrape_ipeds_data
 
 @pytest.mark.parametrize('subject, year_range_char', [
     # characteristics

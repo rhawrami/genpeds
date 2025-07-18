@@ -5,11 +5,49 @@ import zipfile
 import os
 import warnings
 import re
-from typing import Optional
+from typing import Optional, Union, List, Tuple
 
 import requests
 
 from genpeds.config import DATASETS
+
+
+def get_year_iter(subject: str,
+                  year_range: Optional[Union[Tuple[int,int], List[int], int]] = None) -> List[int]:
+    '''
+    get year iterable based on subject and year input
+
+    :param subject: string identifying which subject data to download. The subjects available are:
+     ['characteristics', 'admissions', 'enrollment', 'completion', 'cip', 'graduation']
+    
+    :param year_range: tuple of year integers (indicates a range), iterable of year integers (indicates group of individual years), or single year to pull data from. Data for 'characteristics', 'enrollment' and 'completion' are available for years 1984-2023, while 'graduation' is available for years 2000-2023. Defaults to all available years for a subject.
+    '''
+    subject = subject.lower()
+
+    if not year_range:
+        if subject == 'graduation':
+            start, end = 2000, 2023
+            iter_range = list(range(start, end + 1))  # default for graduation data
+        elif subject == 'admissions':
+            start, end = 2001, 2023
+            iter_range = list(range(start, end + 1))  # default for admissions data
+        else:
+            start, end = 1984, 2023
+            iter_range = list(range(start, end + 1))  # default for all other data
+    else:
+        if isinstance(year_range, tuple):
+            start, end = year_range
+            iter_range = list(range(start, end + 1))  # tuple follows regular range
+        elif isinstance(year_range, list):
+            iter_range = year_range  # list remains list
+        elif isinstance(year_range, int):
+            start = year_range
+            iter_range = [start]  # integer becomes one-element list
+        else:
+            raise TypeError('Please enter a tuple range, list of integers, or a single integer')
+    
+    return iter_range
+
 
 def get_file_endpoint(subject: str, 
                       year: int) -> Optional[str]:
@@ -91,7 +129,7 @@ def download_a_file(subject: str,
 
 
 def scrape_ipeds_data(subject: str = 'characteristics', 
-                      year_range: Optional[str] = None, 
+                      year_range: Optional[Union[Tuple[int,int], List[int], int]] = None, 
                       see_progress: bool = True) -> None:
     '''
     downloads NCES IPEDS data on specified years for a defined subject.
@@ -117,31 +155,11 @@ def scrape_ipeds_data(subject: str = 'characteristics',
 
     - :graduation: number of cohorts and graduates by gender, institutional level and graduation measure (e.g., students earning a bachelor's degree within 6 years of entering). Available for years 2000-2023.
     '''
-    subject = subject.lower()
     relevant_dir = DATASETS[subject]['dir']
     relevant_prefix = DATASETS[subject]['file_prefix'] # file subject prefix
     # Determine the years to download
-    if not year_range:
-        if subject == 'graduation':
-            start, end = 2000, 2023
-            iter_range = range(start, end + 1)  # default for graduation data
-        elif subject == 'admissions':
-            start, end = 2001, 2023
-            iter_range = range(start, end + 1)  # default for admissions data
-        else:
-            start, end = 1984, 2023
-            iter_range = range(start, end + 1)  # default for all other data
-    else:
-        if isinstance(year_range, tuple):
-            start, end = year_range
-            iter_range = range(start, end + 1)  # tuple follows regular range
-        elif isinstance(year_range, list):
-            iter_range = year_range  # list remains list
-        elif isinstance(year_range, int):
-            start = year_range
-            iter_range = [start]  # integer becomes one-element list
-        else:
-            raise ValueError('Please enter a tuple range, list of integers, or a single integer')
+    iter_range = get_year_iter(subject=subject,
+                               year_range=year_range)
     
     if os.path.isdir(relevant_dir): # so we don't need to redownload if it isn't necessary
         iter_range2 = []
