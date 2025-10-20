@@ -1,5 +1,7 @@
 {
     "characteristics": {
+        "description": "Institutional characteristics for each school in a given year, including information like a school's name and address; available for years 1984-2023.", 
+        "years_available": [1984,2023],
         "endpoints": {
             "1984": "IC1984",
             "1985": "IC1985",
@@ -42,10 +44,23 @@
             "2022": "HD2022",
             "2023": "HD2023",
             "2024": "HD2024"
+        },
+        "variables": {
+            "id" : "Institutional unique identifier ID; though UNITIDs can vary over time due to instutions splitting, this variable is generally consistent for an institution over time.", 
+            "year" : "Survey year.",
+            "name" : "Name of institution location.", 
+            "address" : "Address of institution location.", 
+            "city" : "City of institution location.", 
+            "state" : "State of institution location.", 
+            "zipcode" : "Zipcode of institution location.", 
+            "webaddress" : "Admissions website URL of institution location.",
+            "longitude" : "Longitude coordinate of institution location.", 
+            "latitude" : "Latitude coordinate of institution location."
         }
     },
     "admissions": {
-        
+        "description": "Admissions data for each school in a given year (measured in the Fall), including information like ACT/SAT scores and acceptance rates by gender; available for years 2001-2023.", 
+        "years_available": [2001,2023],
         "endpoints": {
             "2001": "IC2001",
             "2002": "IC2002",
@@ -70,9 +85,44 @@
             "2021": "ADM2021",
             "2022": "ADM2022",
             "2023": "ADM2023"
+        },
+        "variables": {
+            "id" : "Institutional unique identifier ID; though UNITIDs can vary over time due to instutions splitting, this variable is generally consistent for an institution over time.", 
+            "year" : "Survey year.",
+            "tot_applied" : "Total number of first-time, degree/certificate-seeking applicants in a given year.",
+            "tot_admitted" : "Total number of first-time, degree/certificate-seeking applicants who were admitted in a given year.", 
+            "tot_enrolled" : "Total number of admitteees who ultimately enrolled (includes part-time and full-time enrollemnt).", 
+            "men_applied" : "Number of first-time, degree/certificate-seeking men who applied to an institution in a given year.", 
+            "men_admitted" : "Number of first-time, degree/certificate-seeking men who were admitted to an institution in a given year.", 
+            "men_enrolled" : "Number of admitted men who ultimately enrolled (includes part-time and full-time enrollemnt).", 
+            "accept_rate_men" : "Acceptance rate of male applicants.", 
+            "accept_rate_women" : "Acceptance rate of female applicants.", 
+            "yield_rate_men": "Yield rate (share of admitted students who ultimately enrolled) of male admittees.",
+            "yield_rate_women" : "Yield rate (share of admitted students who ultimately enrolled) of female admittees.",
+            "men_applied_share" : "Male share of total number of first-time, degree/certificate-seeking applicants in a given year.",
+            "men_admitted_share" : "Male share of total number of first-time, degree/certificate-seeking admittees in a given year.", 
+            "share_submit_sat" : "Share of admitted students who submitted an SAT score.",
+            "share_submit_act" : "Share of admitted students who submitted an ACT score.", 
+            "sat_rw_25" : "SAT reading/writing score (25th percentile).",
+            "sat_rw_50" : "SAT reading/writing score (50th percentile).", 
+            "sat_rw_75" : "SAT reading/writing score (75th percentile).", 
+            "sat_math_25" : "SAT mathematics score (25th percentile).",
+            "sat_math_50" : "SAT mathematics score (50th percentile).",
+            "sat_math_75" : "SAT mathematics score (75th percentile).", 
+            "act_comp_25" : "ACT composite score (25th percentile).", 
+            "act_comp_50" : "ACT composite score (50th percentile).",
+            "act_comp_75" : "ACT composite score (75th percentile).", 
+            "act_eng_25" : "ACT English score (25th percentile).", 
+            "act_eng_50" : "ACT English score (50th percentile).", 
+            "act_eng_75" : "ACT English score (75th percentile).",
+            "act_math_25" : "ACT mathematics score (25th percentile).", 
+            "act_math_50" : "ACT mathematics score (50th percentile).", 
+            "act_math_75" : "ACT mathematics score (75th percentile)."
         }
     },
     "enrollment": {
+        "description": "Enrollment data for each school in a given year (measured in the Fall), including information like the male enrollment share and enrollment by gender and race; available at the undergraduate or graduate level; available for years 1984-2023.",
+        "years_available": [1984,2023],
         "endpoints": {
             "1984": "EF1984",
             "1985": "EF1985",
@@ -114,9 +164,31 @@
             "2021": "EF2021A",
             "2022": "EF2022A",
             "2023": "EF2023A"
+        },
+        "variables": {
+            "id" : "Institutional unique identifier ID; though UNITIDs can vary over time due to instutions splitting, this variable is generally consistent for an institution over time.", 
+            "year" : "Survey year.",
+            "studentlevel" : "Level of student enrollment; either 'undergrad' (Undergraduate) or 'grad' (Graduate).",
+            "totmen" : "Total number of men enrolled in the Fall; this includes both part-time and full-time enrollment.", 
+            "totwomen" : "Total number of women enrolled in the Fall; this includes both part-time and full-time enrollment.", 
+            "wtmen" : "Total number of non-Hispanic White men enrolled in the Fall; this includes both part-time and full-time enrollment.", 
+            "wtwomen" : "Total number of non-Hispanic White women enrolled in the Fall; this includes both part-time and full-time enrollment.", 
+            "bkmen" : "Total number of non-Hispanic Black men enrolled in the Fall; this includes both part-time and full-time enrollment.",
+            "bkwomen" : "Total number of non-Hispanic Black women enrolled in the Fall; this includes both part-time and full-time enrollment.",
+            "hspmen" : "Total number of Hispanic men (of any race) enrolled in the Fall; this includes both part-time and full-time enrollment.", 
+            "hspwomen" : "Total number of Hispanic women (of any race) enrolled in the Fall; this includes both part-time and full-time enrollment.", 
+            "asnmen" : "Total number of non-Hispanic Asian men enrolled in the Fall; this includes both part-time and full-time enrollment.", 
+            "asnwomen" : "Total number of non-Hispanic Asian women enrolled in the Fall; this includes both part-time and full-time enrollment.", 
+            "totmen_share" : "Male share of total enrollment; 'total' here is defined as the sum of male and female enrollment; this includes both part-time and full-time enrollment.",  
+            "totwt_share" : "Non-Hispanic White share of total enrollment; 'total' here is defined as the sum of male and female enrollment; this includes both part-time and full-time enrollment.",   
+            "totbk_share" : "Non-Hispanic Black share of total enrollment; 'total' here is defined as the sum of male and female enrollment; this includes both part-time and full-time enrollment.", 
+            "tothsp_share" : "Hispanic share of total enrollment; 'total' here is defined as the sum of male and female enrollment; this includes both part-time and full-time enrollment.",
+            "totasn_share" : "Non-Hispanic Asian share of total enrollment; 'total' here is defined as the sum of male and female enrollment; this includes both part-time and full-time enrollment."
         }
     },
     "completion": {
+        "description": "Completion data for each school in a given year by detailed subject field, including information like the male completion share within a subject (e.g., Economics); available at the Associate, Bachelor's, Master's or Doctoral level; available for years 1984-2023.",
+        "years_available": [1984,2023],
         "endpoints": {
             "1984": "C1984_CIP",
             "1985": "C1985_CIP",
@@ -159,9 +231,32 @@
             "2022": "C2022_A",
             "2023": "C2023_A",
             "2024": "C2024_A"
+        },
+        "variables": {
+            "id" : "Institutional unique identifier ID; though UNITIDs can vary over time due to instutions splitting, this variable is generally consistent for an institution over time.", 
+            "year" : "Survey year. Note that the cohort being tracked is the cohort that started either six years back (for bachelor) or three years back (for associate).",
+            "cip" : "CIP (Classification of Instructional Programs) code for a subject in a given year.", 
+            "totmen" : "Total number of male completers within a CIP subject.", 
+            "totwomen" : "Total number of female completers within a CIP subject.", 
+            "wtmen" : "Total number of non-Hispanic White men completers within a CIP subject.; this includes both part-time and full-time enrollment.", 
+            "wtwomen" : "Total number of non-Hispanic White women completers within a CIP subject.; this includes both part-time and full-time enrollment.", 
+            "bkmen" : "Total number of non-Hispanic Black men completers within a CIP subject.; this includes both part-time and full-time enrollment.",
+            "bkwomen" : "Total number of non-Hispanic Black women completers within a CIP subject.; this includes both part-time and full-time enrollment.",
+            "hspmen" : "Total number of Hispanic men (of any race) completers within a CIP subject.; this includes both part-time and full-time enrollment.", 
+            "hspwomen" : "Total number of Hispanic women (of any race) completers within a CIP subject.; this includes both part-time and full-time enrollment.", 
+            "asnmen" : "Total number of non-Hispanic Asian men completers within a CIP subject.; this includes both part-time and full-time enrollment.", 
+            "asnwomen" : "Total number of non-Hispanic Asian women completers within a CIP subject.; this includes both part-time and full-time enrollment.", 
+            "totwt_share" : "Non-Hispanic White share of total (male and female) completers within a CIP subject.",   
+            "totbk_share" : "Non-Hispanic Black share of total (male and female) completers within a CIP subject.", 
+            "tothsp_share" : "Hispanic share of total (male and female) completers within a CIP subject.",
+            "totasn_share" : "Non-Hispanic Asian share of total (male and female) completers within a CIP subject.",
+            "totmen_share" : "Male share of total (male and female) completers within a CIP subject.", 
+            "deglevel" : "Degree level of completers; options include 'assc' (Associate's), 'bach' (Bachelor's), 'mast' (Master's), and 'doct' (Doctoral)."
         }
     },
     "graduation": {
+        "description": "Graduation data for each school in a given year, including information like the graduation rate by gender and race; available at the Associate or Bachelor's level; available for years 2000-2023.",
+        "years_available": [2000,2023],
         "endpoints": {
             "2000": "GR2000",
             "2001": "GR2001",
@@ -187,9 +282,46 @@
             "2021": "GR2021",
             "2022": "GR2022",
             "2023": "GR2023"
+        },
+        "variables": {
+            "id" : "Institutional unique identifier ID; though UNITIDs can vary over time due to instutions splitting, this variable is generally consistent for an institution over time.", 
+            "year" : "Survey year. Note that the cohort being tracked is the cohort that started either six years back (for bachelor) or three years back (for associate).",
+            "deglevel" : "Level of student degree; either 'bach' (Bachelor's) or 'assc' (Associates).",
+            "totmen" : "Total number of men within an adjusted cohort.", 
+            "totmen_graduated" : "Total number of men within an adjusted cohort that graduated within 150 percent of the normal time considered to graduate; for bachelor's degrees, this is six years, and for associate's degrees, this is three years.", 
+            "totwomen" : "Total number of women within an adjusted cohort.", 
+            "totwomen_graduated" : "Total number of women within an adjusted cohort that graduated within 150 percent of the normal time considered to graduate; for bachelor's degrees, this is six years, and for associate's degrees, this is three years.",
+            "wtmen" : "Total number of non-Hispanic White men within an adjusted cohort.", 
+            "wtmen_graduated" : "Total number of non-Hispanic White men within an adjusted cohort that graduated within 150 percent of the normal time considered to graduate; for bachelor's degrees, this is six years, and for associate's degrees, this is three years.", 
+            "wtwomen" : "Total number of non-Hispanic White women within an adjusted cohort.", 
+            "wtwomen_graduated" : "Total number of  non-Hispanic White women within an adjusted cohort that graduated within 150 percent of the normal time considered to graduate; for bachelor's degrees, this is six years, and for associate's degrees, this is three years.", 
+            "bkmen" : "Total number of non-Hispanic Black men within an adjusted cohort.",
+            "bkmen_graduated" : "Total number of non-Hispanic Black men within an adjusted cohort that graduated within 150 percent of the normal time considered to graduate; for bachelor's degrees, this is six years, and for associate's degrees, this is three years.", 
+            "bkwomen" : "Total number of non-Hispanic Black women within an adjusted cohort.", 
+            "bkwomen_graduated" : "Total number of non-Hispanic Black women within an adjusted cohort that graduated within 150 percent of the normal time considered to graduate; for bachelor's degrees, this is six years, and for associate's degrees, this is three years.", 
+            "hspmen" : "Total number of Hispanic men within an adjusted cohort.",
+            "hspmen_graduated" : "Total number of Hispanic men within an adjusted cohort that graduated within 150 percent of the normal time considered to graduate; for bachelor's degrees, this is six years, and for associate's degrees, this is three years.", 
+            "hspwomen" : "Total number of Hispanic women within an adjusted cohort.", 
+            "hspwomen_graduated" : "Total number of Hispanic women within an adjusted cohort that graduated within 150 percent of the normal time considered to graduate; for bachelor's degrees, this is six years, and for associate's degrees, this is three years.", 
+            "asnmen" : "Total number of non-Hispanic Asian men within an adjusted cohort.",
+            "asnmen_graduated" : "Total number of non-Hispanic Asian men within an adjusted cohort that graduated within 150 percent of the normal time considered to graduate; for bachelor's degrees, this is six years, and for associate's degrees, this is three years.", 
+            "asnwomen" : "Total number of non-Hispanic Asian women within an adjusted cohort.", 
+            "asnwomen_graduated" : "Total number of non-Hispanic Asian women within an adjusted cohort that graduated within 150 percent of the normal time considered to graduate; for bachelor's degrees, this is six years, and for associate's degrees, this is three years.",  
+            "gradrate_totmen" : "Graduation rate for men (within 150 percent of normal time taken to graduate).",
+            "gradrate_totwomen" : "Graduation rate for women (within 150 percent of normal time taken to graduate).", 
+            "gradrate_wtmen" : "Graduation rate for non-Hispanic White men (within 150 percent of normal time taken to graduate).", 
+            "gradrate_wtwomen" : "Graduation rate for non-Hispanic White women (within 150 percent of normal time taken to graduate).",
+            "gradrate_bkmen" : "Graduation rate for non-Hispanic Black men (within 150 percent of normal time taken to graduate).", 
+            "gradrate_bkwomen" : "Graduation rate for non-Hispanic Black women (within 150 percent of normal time taken to graduate).", 
+            "gradrate_hspmen" : "Graduation rate for Hispanic men (within 150 percent of normal time taken to graduate).",
+            "gradrate_hspwomen" : "Graduation rate for Hispanic women (within 150 percent of normal time taken to graduate).", 
+            "gradrate_asnmen" : "Graduation rate for  non-Hispanic Asianmen (within 150 percent of normal time taken to graduate).", 
+            "gradrate_asnwomen" : "Graduation rate for non-Hispanic Asian women (within 150 percent of normal time taken to graduate)."
         }
     },
     "cip": {
+        "description": "Provides subject field codes for subjects in a given year; should be used with Completion data; available for years 1984-2023.",
+        "years_available": [1984,2023],
         "endpoints": {
             "1984": "C1984_CIP",
             "1985": "C1985_CIP",
@@ -231,6 +363,11 @@
             "2021": "C2021_A",
             "2022": "C2022_A",
             "2023": "C2023_A"
+        },
+        "variables": {
+            "year" : "Survey year. Note that the cohort being tracked is the cohort that started either six years back (for bachelor) or three years back (for associate).",
+            "cip" : "CIP (Classification of Instructional Programs) identifier code.",
+            "cip_description" : "CIP subject label (e.g., Geology)."
         }
     }
 }
