@@ -8,8 +8,73 @@ import pandas as pd
 import numpy as np
 import us 
 
-from genpeds.config import VARIABLE_RENAME
 from genpeds.downloader import get_year_iter
+
+
+VARIABLE_RENAME = {
+    'characteristics' : {
+        'unitid' : 'id', 'instnm' : 'name',
+          'addr' : 'address', 'city' : 'city', 'stabbr' : 'state', 'zip' : 'zipcode', 
+          'webaddr' : 'webaddress', 
+          'longitud' : 'longitude', 'latitude' : 'latitude'
+    },
+
+    'admissions' : {
+        'unitid' : 'id', 
+        'applcnm' : 'men_applied', 'applcnw' : 'women_applied', 
+        'admssnm' : 'men_admitted', 'admssnw' : 'women_admitted',
+        'satpct' : 'share_submit_sat', 'actpct' : 'share_submit_act',                                      
+        'satvr25' : 'sat_rw_25', 'satvr75' : 'sat_rw_75', 
+        'satmt25' : 'sat_math_25', 'satmt75' : 'sat_math_75', 
+        'actcm25' : 'act_comp_25', 'actcm75' : 'act_comp_75',
+        'acten25' : 'act_eng_25', 'acten75' : 'act_eng_75', 
+        'actmt25' : 'act_math_25', 'actmt75' : 'act_math_75',
+        'enrlftm' : 'men_ft_enrolled', 'enrlftw' : 'women_ft_enrolled',
+        'enrlptm' : 'men_pt_enrolled', 'enrlptw' : 'women_pt_enrolled',
+        'enrlm' : 'men_enrolled', 'enrlw' : 'women_enrolled',
+        'applcn' : 'tot_applied', 'admssn' : 'tot_admitted', 'enrlt' : 'tot_enrolled',
+        'acten50' : 'act_eng_50', 'actmt50' : 'act_math_50', 'actcm50' : 'act_comp_50',
+        'satvr50' : 'sat_rw_50', 'satmt50' : 'sat_math_50'
+    },
+
+    'enrollment' : {
+        'unitid' : 'id', 'line' : 'line', 'efrace15' : 'totmen', 'efrace16' : 'totwomen',
+        'eftotlm' : 'totmen', 'eftotlw' : 'totwomen', 'efwhitm' : 'wtmen', 'efwhitw' : 'wtwomen',
+        'efbkaam' : 'bkmen', 'efbkaaw' : 'bkwomen', 'efhispm' : 'hspmen', 'efhispw' : 'hspwomen', 
+        'efasiam' : 'asnmen', 'efasiaw' : 'asnwomen', 'eftotlw' : 'totwomen',
+        'efrace11' : 'wtmen', 'efrace12' : 'wtwomen', 'efrace03' : 'bkmen', 'efrace04' : 'bkwomen', 
+        'efrace09' : 'hspmen', 'efrace10' : 'hspwomen', 'efrace07' : 'asnmen', 'efrace08' : 'asnwomen'
+    },
+
+    'completion' : {
+        'unitid' : 'id', 'cipcode' : 'cip', 'awlevel' : 'awlevel',
+        'crace15' : 'totmen', 'crace16' : 'totwomen',
+        'ctotalm' : 'totmen', 'ctotalw' : 'totwomen', 
+        'cwhitm' : 'wtmen', 'cwhitw' : 'wtwomen', 'cbkaam' : 'bkmen', 'cbkaaw' : 'bkwomen', 
+        'chispm' : 'hspmen', 'chispw' : 'hspwomen', 'casiam' : 'asnmen', 'casiaw' : 'asnwomen',
+        'crace11' : 'wtmen', 'crace12' : 'wtwomen', 'crace03' : 'bkmen', 'crace04' : 'bkwomen', 
+        'crace09' : 'hspmen', 'crace10' : 'hspwomen', 'crace07' : 'asnmen', 'crace08' : 'asnwomen'
+    },
+
+    'cip' : {
+        # nothing needed for now.
+    },
+
+    'graduation' : {
+        'grtotlm' : 'totmen', 'grtotlw' : 'totwomen', 
+        'grwhitm' : 'wtmen', 'grwhitw' : 'wtwomen',
+        'grbkaam' : 'bkmen', 'grbkaaw' : 'bkwomen', 
+        'grhispm' : 'hspmen', 'grhispw' : 'hspwomen', 
+        'grasiam' : 'asnmen', 'grasiaw' : 'asnwomen', 
+        'grrace15' : 'totmen', 'grrace16' : 'totwomen',
+        'grrace11' : 'wtmen', 'grrace12' : 'wtwomen', 
+        'grrace03' : 'bkmen', 'grrace04' : 'bkwomen', 
+        'grrace09' : 'hspmen', 'grrace10' : 'hspwomen', 
+        'grrace07' : 'asnmen', 'grrace08' : 'asnwomen',
+        'chrtstat' : 'chrtstat', 'section' : 'section', 
+        'cohort' : 'cohort', 'unitid' : 'id', 'grtype' : 'grtype'
+    }
+}
 
 
 def clean_characteristics(characteristics_dir: str = 'characteristicsdata',
@@ -370,6 +435,7 @@ def clean_cip(cip_codes_dir: str = 'cipdata',
                                'cip' : html_dict.keys()}, dtype=str)
         else:
             df = pd.read_excel(file_path, sheet_name='Frequencies', dtype=str)
+            df = df.rename(columns=str.lower)
             df = df.query('varname == "CIPCODE" or varname == "Cipcode"').loc[:, ['codevalue', 'valuelabel']]
             df = df.rename(columns={'codevalue' : 'cip', 'valuelabel' : 'cip_description'})
         df['year'] = int(year_num) # year identifier
