@@ -541,16 +541,3 @@ class Graduation(IPDS):
             char_df = Characteristics(year_range=self.year_range).run(see_progress=see_progress, rm_disk=rm_disk)
             df = df.merge(char_df, on=['id', 'year'])
         return df
-    
-
-
-if __name__ == '__main__':
-    g = Completion(year_range=[1990, 2001, 2009, 2018])
-    gdat = g.run(degree_level='bach', 
-                 see_progress=True, 
-                 merge_with_char=True,
-                 get_cip_codes=True,
-                 rm_disk=False)
-    
-    print(gdat.head(20))
-    print(gdat.tail(20))
