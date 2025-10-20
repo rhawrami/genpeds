@@ -20,5 +20,5 @@ license-files = ["LICENSE.md"]
 [project-urls]
 Homepage = "https://github.com/rhawrami/genpeds"
 
-[project-scripts]
-genpeds-cli = "genpeds.cli:main"
+[project.scripts]
+genpeds = "genpeds.cli:main"
