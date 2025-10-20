@@ -1,4 +1,6 @@
 import shutil
+import json
+from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import Dict, Optional, Tuple, List, Union
 
@@ -6,26 +8,32 @@ import pandas as pd
 
 from genpeds.downloader import scrape_ipeds_data
 from genpeds.cleaners import CLEANERS
-from genpeds.config import DATASETS, VARIABLE_DICT
+
 
 class IPDS(ABC):
     subject = None
     
     def __init__(self, 
                  year_range: Optional[Union[Tuple[int,int], List[int], int]] = None):
+        pkg_dir = Path(__file__).parent
+        endpoint_path = pkg_dir / 'cfg.json'
+        with open(endpoint_path, 'r') as cfgjf:
+            cfg = json.load(cfgjf)
+
         self.year_range = year_range # year range by user
-        self.available_years = DATASETS[self.subject]['years_available']
-        self.variable_dict = VARIABLE_DICT[self.subject]
+        self.description = cfg[self.subject]['description']
+        self.available_years = cfg[self.subject]['years_available']
+        self.variable_dict = cfg[self.subject]['variables']
 
 
     def get_description(self) -> str:
         '''returns description of the subject data.'''
-        return DATASETS[self.subject]['description']
+        return self.description
     
 
     def get_available_years(self) -> Tuple[int,int]:
         '''returns available years for a subject's data.'''
-        return self.available_years
+        return tuple(self.available_years)
     
 
     def get_available_vars(self) -> Dict[str,str]:
@@ -33,7 +41,7 @@ class IPDS(ABC):
         return self.variable_dict
     
 
-    def lookup_var(self, var='') -> str:
+    def lookup_var(self, var: str) -> str:
         '''returns variable description.'''
         return self.variable_dict[var]
 
@@ -205,10 +213,7 @@ class Admissions(IPDS):
         self.scrape(see_progress=see_progress)
         df = self.clean(rm_disk=rm_disk)
         if merge_with_char:
-            if rm_disk:
-                char_df = Characteristics(year_range=self.year_range).run(see_progress=see_progress, rm_disk=True)
-            else:
-                char_df = Characteristics(year_range=self.year_range).run(see_progress=see_progress, rm_disk=False)
+            char_df = Characteristics(year_range=self.year_range).run(see_progress=see_progress, rm_disk=rm_disk)
             df = df.merge(char_df, on=['id', 'year'])
         return df
     
@@ -254,7 +259,7 @@ class Enrollment(IPDS):
 
     def clean(self, 
               student_level: str = 'undergrad', 
-              enroll_dir = 'enrollmentdata', 
+              enroll_dir: str = 'enrollmentdata', 
               rm_disk = False) -> pd.DataFrame:
         '''
         cleans downloaded Fall Enrollment data, returns Pandas Dataframe.
@@ -297,10 +302,7 @@ class Enrollment(IPDS):
         self.scrape(see_progress=see_progress)
         df = self.clean(rm_disk=rm_disk, student_level=student_level)
         if merge_with_char:
-            if rm_disk:
-                char_df = Characteristics(year_range=self.year_range).run(see_progress=see_progress, rm_disk=True)
-            else:
-                char_df = Characteristics(year_range=self.year_range).run(see_progress=see_progress, rm_disk=False)
+            char_df = Characteristics(year_range=self.year_range).run(see_progress=see_progress, rm_disk=rm_disk)
             df = df.merge(char_df, on=['id', 'year'])
         return df
 
@@ -444,13 +446,10 @@ class Completion(IPDS):
         self.scrape(see_progress=see_progress)
         df = self.clean(rm_disk=rm_disk, degree_level=degree_level)
         if merge_with_char:
-            if rm_disk:
-                char_df = Characteristics(year_range=self.year_range).run(see_progress=see_progress, rm_disk=True)
-            else:
-                char_df = Characteristics(year_range=self.year_range).run(see_progress=see_progress, rm_disk=False)
+            char_df = Characteristics(year_range=self.year_range).run(see_progress=see_progress, rm_disk=rm_disk)
             df = df.merge(char_df, on=['id', 'year'])
         if get_cip_codes:
-            cip_df = Cip(year_range=self.year_range).run(see_progress=see_progress, rm_disk=True)
+            cip_df = Cip(year_range=self.year_range).run(see_progress=see_progress, rm_disk=rm_disk)
             df = df.merge(cip_df, on=['cip', 'year'])
         return df
 
@@ -539,9 +538,6 @@ class Graduation(IPDS):
         self.scrape(see_progress=see_progress)
         df = self.clean(rm_disk=rm_disk, degree_level=degree_level)
         if merge_with_char:
-            if rm_disk:
-                char_df = Characteristics(year_range=self.year_range).run(see_progress=see_progress, rm_disk=True)
-            else:
-                char_df = Characteristics(year_range=self.year_range).run(see_progress=see_progress, rm_disk=False)
+            char_df = Characteristics(year_range=self.year_range).run(see_progress=see_progress, rm_disk=rm_disk)
             df = df.merge(char_df, on=['id', 'year'])
         return df
