@@ -1,6 +1,5 @@
 {
     "characteristics": {
-        "file_template": "https://nces.ed.gov/ipeds/datacenter/data/{}.zip",
         "endpoints": {
             "1984": "IC1984",
             "1985": "IC1985",
@@ -46,7 +45,7 @@
         }
     },
     "admissions": {
-        "file_template": "https://nces.ed.gov/ipeds/datacenter/data/{}.zip",
+        
         "endpoints": {
             "2001": "IC2001",
             "2002": "IC2002",
@@ -74,7 +73,6 @@
         }
     },
     "enrollment": {
-        "file_template": "https://nces.ed.gov/ipeds/datacenter/data/{}.zip",
         "endpoints": {
             "1984": "EF1984",
             "1985": "EF1985",
@@ -119,7 +117,6 @@
         }
     },
     "completion": {
-        "file_template": "https://nces.ed.gov/ipeds/datacenter/data/{}.zip",
         "endpoints": {
             "1984": "C1984_CIP",
             "1985": "C1985_CIP",
@@ -165,7 +162,6 @@
         }
     },
     "graduation": {
-        "file_template": "https://nces.ed.gov/ipeds/datacenter/data/{}.zip",
         "endpoints": {
             "2000": "GR2000",
             "2001": "GR2001",
@@ -194,7 +190,6 @@
         }
     },
     "cip": {
-        "file_template": "https://nces.ed.gov/ipeds/datacenter/data/{}_Dict.zip",
         "endpoints": {
             "1984": "C1984_CIP",
             "1985": "C1985_CIP",
