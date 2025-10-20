@@ -3,13 +3,17 @@ import time
 import random
 import zipfile
 import os
+from pathlib import Path
+import json
 import warnings
 import re
-from typing import Optional, Union, List, Tuple
+from typing import (Optional, 
+                    Union, 
+                    List, 
+                    Tuple,
+                    Dict)
 
 import requests
-
-from genpeds.config import DATASETS
 
 
 def get_year_iter(subject: str,
@@ -50,82 +54,72 @@ def get_year_iter(subject: str,
 
 
 def get_file_endpoint(subject: str, 
-                      year: int) -> Optional[str]:
+                      year: int,
+                      cfg: Dict[str, str]) -> Optional[str]:
     '''
     returns endpoint for a given subject in a given year.
     
     :param year: year for file; available years vary by subject.
     :param subject: subject.
+    :param cfg: dict with subject-year endpoints
     '''
-    format_rules = DATASETS[subject]['format_rules'] # rules for each subject-year combination
-    endpoint_template = DATASETS[subject]['file_template'] # endpoint template
-
-    lag0, lag1, lead1 = year-1900, year-1901, year-1899 # needed for format rules
-    for cond,frmt in format_rules:
-        if cond(year):
-            yr_format = frmt.format(year=year, 
-                                    lag0=str(lag0), 
-                                    lag1 = str(lag1), 
-                                    lead1 = str(lead1))
-            endpoint = endpoint_template.format(yr_format) # formatted endpoint
-            break
-    else:
-            warnings.warn(f'No formatted rule for year {year}')
-            return None
-    
+    try:
+        endpoint = cfg[subject]["endpoints"][str(year)]
+    except KeyError:
+        warnings.warn(f'No endpoint for year {year}')
+        return None
     return endpoint
 
 
 def download_a_file(subject: str, 
-                    year: int) -> Optional[str]:
+                    year: int,
+                    cfg: Dict[str,str]) -> Optional[str]:
     '''
     downloads an IPEDS subject-year data file.
 
     :param year: year for file; available years vary by subject.
     :param subject: subject.
+    :param cfg: dict with subject-year endpoints
     '''
-    relevant_dir = DATASETS[subject]['dir'] # directory subject name
-    relevant_prefix = DATASETS[subject]['file_prefix'] # file subject prefix
+    dir = f'{subject}data'  # directory subject name
+    prefix = subject    # file subject prefix
 
-    endpoint = get_file_endpoint(subject, year) # get endpoint for a subject-year combination
+    if subject != 'cip':
+        url_template = 'https://nces.ed.gov/ipeds/datacenter/data/{}.zip'
+    else:
+        url_template = 'https://nces.ed.gov/ipeds/datacenter/data/{}_Dict.zip'
+    
+    endpoint = get_file_endpoint(subject, year, cfg) 
+    endpoint_url = url_template.format(endpoint)
 
     try:
-        r = requests.get(endpoint)  # try request
+        r = requests.get(endpoint_url)  
     except requests.HTTPError as er:
         return f"Year {year}: Error - {str(er)}"
         
     if '404 - File or directory not found' in r.text:
         return f"Year {year}: 404 - File not found"
     
-    zipped_file = os.path.join(relevant_dir, f'{relevant_prefix}_{year}.zip')
+    zipped_file = os.path.join(dir, f'{prefix}_{year}.zip')
     
     with open(zipped_file, 'wb') as f:
         f.write(r.content)
-    
-    with zipfile.ZipFile(zipped_file, 'r') as zfile:
-        if subject == 'cip':
-            file_to_extract = endpoint.split('/')[-1].replace('_Dict.zip', '').lower()
-            for ext in ['.html', '.xls', '.xlsx']:  # diff file formats, try each one
-                try:
-                    zfile.extract(file_to_extract + ext, relevant_dir)
-                    # remove & remove zipped file
-                    old_name_file = os.path.join(relevant_dir, f'{file_to_extract}{ext}')
-                    new_name_file = os.path.join(relevant_dir, f'cipcodes_{year}{ext}')
-                    os.rename(old_name_file, new_name_file)
-                    os.remove(zipped_file)
-                    break
-                except KeyError:
-                    continue
-        else:
-            file_to_extract = endpoint.split('/')[-1].replace('.zip', '').lower() + '.csv'
-            zfile.extract(file_to_extract, relevant_dir)
-            # remove & remove zipped file
-            old_name_file = os.path.join(relevant_dir, file_to_extract)
-            new_name_file = os.path.join(relevant_dir, f'{relevant_prefix}_{year}.csv')
-            os.rename(old_name_file, new_name_file)
-            os.remove(zipped_file)
 
-    return(f'IPEDS {subject.title()} ({year}) successfully downloaded and extracted')
+    with zipfile.ZipFile(zipped_file, 'r') as zfile:
+        # there will at least be one file in each zip folder
+        # to not have to deal with varying extensions, case, etc.
+        # just pull the last file (in lex. order)
+        # this way, we can also get the revised files instead of OG ones (they have '^.*_rv' in them)
+        file_to_extract = sorted(zfile.namelist())[-1]
+        zfile.extract(file_to_extract, dir)
+
+        old = os.path.join(dir, file_to_extract)
+        new = os.path.join(dir, re.sub(r'^.*\.', f'{prefix}_{year}.', old))
+
+        os.rename(old, new)
+        os.remove(zipped_file)
+    
+    return f'IPEDS {subject.title()} ({year}) successfully downloaded and extracted'
 
 
 def scrape_ipeds_data(subject: str = 'characteristics', 
@@ -155,33 +149,42 @@ def scrape_ipeds_data(subject: str = 'characteristics',
 
     - :graduation: number of cohorts and graduates by gender, institutional level and graduation measure (e.g., students earning a bachelor's degree within 6 years of entering). Available for years 2000-2023.
     '''
-    relevant_dir = DATASETS[subject]['dir']
-    relevant_prefix = DATASETS[subject]['file_prefix'] # file subject prefix
+    dir = f'{subject}data'
+    prefix = subject
     # Determine the years to download
     iter_range = get_year_iter(subject=subject,
                                year_range=year_range)
     
-    if os.path.isdir(relevant_dir): # so we don't need to redownload if it isn't necessary
+    # check if data already downloaded, if so, drop from download list
+    if os.path.isdir(dir): 
         iter_range2 = []
-        stripped_list = [re.sub(r'\.csv|\.html|\.xlsx|\.xlsx','',ff) 
-                             for ff in sorted(os.listdir(relevant_dir))]
+        stripped_list = [
+            re.sub(r'\.(csv|html|xlsx|xls)','',ff) 
+            for ff 
+            in sorted(os.listdir(dir))
+        ]
         for yr in iter_range:
-            if f'{relevant_prefix}_{yr}' not in stripped_list:
+            if f'{prefix}_{yr}' not in stripped_list:
                 iter_range2.append(yr)
         iter_range = iter_range2
     else:
-        os.makedirs(relevant_dir, exist_ok=True) # create subject directory, where unzipped files will be stored
+        os.makedirs(dir, exist_ok=True) # create subject dir
+
+    # open endpoint cfg
+    pkg_dir = Path(__file__).parent
+    endpoint_path = pkg_dir / 'cfg.json'
+    with open(endpoint_path, 'r') as cfgjf:
+        cfg = json.load(cfgjf)
 
     # multithread to speed up the process
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as exec:
-        future_to_year = {exec.submit(download_a_file, subject, year): year for year in iter_range}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=7) as exec:
+        future_to_year = {exec.submit(download_a_file, subject, year, cfg): year for year in iter_range}
         for future in concurrent.futures.as_completed(future_to_year):
             yr = future_to_year[future]
             try:
                 result = future.result()
                 if see_progress:
                     print(result) # if you want to see the progress
-                time.sleep(random.uniform(0.1, 0.3)) # you're welcome NCES :)
+                time.sleep(random.uniform(0.05, 0.2)) # you're welcome NCES :)
             except Exception as exc:
                 print(f"Year {yr} generated an exception: {exc}")
-
