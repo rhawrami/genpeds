@@ -8,6 +8,9 @@ Per [IPEDS](https://nces.ed.gov/ipeds/about-ipeds):
 
 `genpeds`, or the **[gen]dered [p]ostsecondary [education] [d]ata [s]atrap**, provides a Python API for requesting, and cleaning IPEDS data for a host of subjects, particularly for studying college trends by gender.
 
+## Recent Updates
+Support for 2024 data has been added.
+
 ## Usage
 
 ### Install

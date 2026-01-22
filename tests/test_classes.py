@@ -41,7 +41,7 @@ def get_iter_range(years):
 @pytest.mark.parametrize('subject_name, subject, year_range', [
     ('characteristics', Characteristics, (2000,2005)), 
     ('admissions', Admissions, [2005,2009,2012,2022]),
-    ('enrollment', Enrollment, [1984,1989,1990,2003,2023]),
+    ('enrollment', Enrollment, [1984,1989,1990,2003,2024]),
     ('completion', Completion, (2002,2012)),
     ('graduation', Graduation, (2015,2019))
 ])
@@ -50,11 +50,11 @@ def test_common_methods(subject_name, subject, year_range):
     genpeds_class = subject(year_range=year_range)
     # test if .year_range() returns correct ranges
     if isinstance(genpeds_class, (Characteristics, Enrollment, Completion)):
-        assert genpeds_class.get_available_years() == (1984,2023) # check if returns appropriate range
+        assert genpeds_class.get_available_years() == (1984,2024) # check if returns appropriate range
     elif isinstance(genpeds_class, Admissions):
-        assert genpeds_class.get_available_years() == (2001,2023)
+        assert genpeds_class.get_available_years() == (2001,2024)
     else:
-        assert genpeds_class.get_available_years() == (2000,2023)
+        assert genpeds_class.get_available_years() == (2000,2024)
     # test if correct description is returned, lazy test but it's fine for now
     assert subject_name in genpeds_class.get_description().lower()
     # test .available_vars()
@@ -135,7 +135,7 @@ def test_enrollment_extended(lev, year_range):
     ('assc', [2012,2022]),
     ('bach', [1990,1994,2000]),
     ('mast', [2015,2016,2019]),
-    ('doct', [1999, 2020,2023])
+    ('doct', [1999, 2020,2024])
 ])
 def test_completion_extended(lev, year_range):
     '''tests Completion().clean() and Completion().run()'''
@@ -151,14 +151,14 @@ def test_completion_extended(lev, year_range):
     assert 'name' in df2.columns
     assert len(df2.loc[df2['name'] == 'Stanford University']) > 0
     assert 'cip_description' in df2.columns
-    assert len(df2.loc[df2['cip_description'] == 'Physics']) > 0
+    assert len(df2.loc[df2['cip_description'] == 'Physics, General']) > 0
     
 # test Graduation.clean() and Graduation.run()
 # Graduation takes degree_level param
 # options include 'assc', 'bach'
 @pytest.mark.parametrize('lev, year_range', [
     ('assc', [2004,2005,2018,2020]),
-    ('bach', [2017,2019,2022,2023])
+    ('bach', [2017,2019,2022,2024])
 ])
 def test_graduation_extended(lev, year_range):
     '''tests Graduation.clean() and Graduation.run()'''

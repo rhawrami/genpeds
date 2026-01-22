@@ -87,7 +87,7 @@ class Characteristics(IPDS):
         >>> import genpeds as ed
         >>> chars_2000 = ed.Characteristics(year_range=[2000,2005,2010]) # three years of data
         >>> chars_2000.get_available_years()
-         (1984,2023) # available years for Characteristics data
+         (1984,2024) # available years for Characteristics data
         >>> chars_data = chars_2000.run() # returns Pandas dataframe
 
         
@@ -160,7 +160,7 @@ class Admissions(IPDS):
         >>> import genpeds as ed
         >>> adm_2010s = ed.Admissions(year_range=(2010,2019)) # ten years of data
         >>> adm_2010s.get_available_years()
-         (2001,2023) # available years for Admissions data
+         (2001,2024) # available years for Admissions data
         >>> adm_data = adm_2010s.run() # returns Pandas dataframe
 
         ----------------
@@ -237,7 +237,7 @@ class Enrollment(IPDS):
         >>> import genpeds as ed
         >>> enroll_2022 = ed.Enrollment(year_range=2022) # one year of data
         >>> enroll_2022.get_available_years()
-         (1984,2023) # available years for Enrollment data
+         (1984,2024) # available years for Enrollment data
         >>> enroll_data = enroll_2022.run() # returns Pandas dataframe
 
         ----------------
@@ -312,14 +312,14 @@ class Cip(IPDS):
     subject = 'cip'
 
     def __init__(self, 
-                 year_range: Optional[Union[Tuple[int,int], List[int], int]] = (1984,2023)):
+                 year_range: Optional[Union[Tuple[int,int], List[int], int]] = (1984,2024)):
         '''
         IPEDS CIP Codes data.
 
         :param year_range::
           tuple of inclusive year integers (indicates a range), iterable of year integers (indicates group of individual years), or single year to pull data from.
 
-        CIP, or Classification of Instructional Programs, are key-value pairs for subject study fields. CIP's vary by year, and are relevant to identify subject field in completion data. Available for years 1984-2023. CIP data should be used in conjunction with Completion data.
+        CIP, or Classification of Instructional Programs, are key-value pairs for subject study fields. CIP's vary by year, and are relevant to identify subject field in completion data. Available for years 1984-2024. CIP data should be used in conjunction with Completion data.
         '''
         super().__init__(year_range)
 
@@ -364,7 +364,7 @@ class Completion(IPDS):
     subject = 'completion'
 
     def __init__(self, 
-                 year_range: Optional[Union[Tuple[int,int], List[int], int]] = (1984,2023)):
+                 year_range: Optional[Union[Tuple[int,int], List[int], int]] = (1984,2024)):
         '''
         IPEDS Completion data.
         
@@ -378,7 +378,7 @@ class Completion(IPDS):
         >>> import genpeds as ed
         >>> complete_2022 = ed.Completion(year_range=2022) # one year of data
         >>> complete_2022.get_available_years()
-         (1984,2023) # available years for Enrollment data
+         (1984,2024) # available years for Enrollment data
         >>> complete_data = complete_2022.run() # returns Pandas dataframe
 
         ----------------
@@ -459,7 +459,7 @@ class Graduation(IPDS):
     subject = 'graduation'
 
     def __init__(self, 
-                 year_range: Optional[Union[Tuple[int,int], List[int], int]] = (1984,2023)):
+                 year_range: Optional[Union[Tuple[int,int], List[int], int]] = (1984,2024)):
         '''
         IPEDS Graduation data.
         
@@ -473,7 +473,7 @@ class Graduation(IPDS):
         >>> import genpeds as ed
         >>> grad_aughts = ed.Completion(year_range=(2000,2009)) # ten years of data
         >>> grad_aughts.get_available_years()
-         (2000,2023) # available years for Enrollment data
+         (2000,2024) # available years for Enrollment data
         >>> grad_data = grad_aughts.run() # returns Pandas dataframe
 
         ----------------

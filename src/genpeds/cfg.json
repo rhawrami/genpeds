@@ -1,7 +1,7 @@
 {
     "characteristics": {
-        "description": "Institutional characteristics for each school in a given year, including information like a school's name and address; available for years 1984-2023.", 
-        "years_available": [1984,2023],
+        "description": "Institutional characteristics for each school in a given year, including information like a school's name and address; available for years 1984-2024.", 
+        "years_available": [1984,2024],
         "endpoints": {
             "1984": "IC1984",
             "1985": "IC1985",
@@ -59,8 +59,8 @@
         }
     },
     "admissions": {
-        "description": "Admissions data for each school in a given year (measured in the Fall), including information like ACT/SAT scores and acceptance rates by gender; available for years 2001-2023.", 
-        "years_available": [2001,2023],
+        "description": "Admissions data for each school in a given year (measured in the Fall), including information like ACT/SAT scores and acceptance rates by gender; available for years 2001-2024.", 
+        "years_available": [2001,2024],
         "endpoints": {
             "2001": "IC2001",
             "2002": "IC2002",
@@ -84,7 +84,8 @@
             "2020": "ADM2020",
             "2021": "ADM2021",
             "2022": "ADM2022",
-            "2023": "ADM2023"
+            "2023": "ADM2023",
+            "2024": "ADM2024"
         },
         "variables": {
             "id" : "Institutional unique identifier ID; though UNITIDs can vary over time due to instutions splitting, this variable is generally consistent for an institution over time.", 
@@ -121,8 +122,8 @@
         }
     },
     "enrollment": {
-        "description": "Enrollment data for each school in a given year (measured in the Fall), including information like the male enrollment share and enrollment by gender and race; available at the undergraduate or graduate level; available for years 1984-2023.",
-        "years_available": [1984,2023],
+        "description": "Enrollment data for each school in a given year (measured in the Fall), including information like the male enrollment share and enrollment by gender and race; available at the undergraduate or graduate level; available for years 1984-2024.",
+        "years_available": [1984,2024],
         "endpoints": {
             "1984": "EF1984",
             "1985": "EF1985",
@@ -163,7 +164,8 @@
             "2020": "EF2020A",
             "2021": "EF2021A",
             "2022": "EF2022A",
-            "2023": "EF2023A"
+            "2023": "EF2023A",
+            "2024": "EF2024A"
         },
         "variables": {
             "id" : "Institutional unique identifier ID; though UNITIDs can vary over time due to instutions splitting, this variable is generally consistent for an institution over time.", 
@@ -187,8 +189,8 @@
         }
     },
     "completion": {
-        "description": "Completion data for each school in a given year by detailed subject field, including information like the male completion share within a subject (e.g., Economics); available at the Associate, Bachelor's, Master's or Doctoral level; available for years 1984-2023.",
-        "years_available": [1984,2023],
+        "description": "Completion data for each school in a given year by detailed subject field, including information like the male completion share within a subject (e.g., Economics); available at the Associate, Bachelor's, Master's or Doctoral level; available for years 1984-2024.",
+        "years_available": [1984,2024],
         "endpoints": {
             "1984": "C1984_CIP",
             "1985": "C1985_CIP",
@@ -255,8 +257,8 @@
         }
     },
     "graduation": {
-        "description": "Graduation data for each school in a given year, including information like the graduation rate by gender and race; available at the Associate or Bachelor's level; available for years 2000-2023.",
-        "years_available": [2000,2023],
+        "description": "Graduation data for each school in a given year, including information like the graduation rate by gender and race; available at the Associate or Bachelor's level; available for years 2000-2024.",
+        "years_available": [2000,2024],
         "endpoints": {
             "2000": "GR2000",
             "2001": "GR2001",
@@ -281,7 +283,8 @@
             "2020": "GR2020",
             "2021": "GR2021",
             "2022": "GR2022",
-            "2023": "GR2023"
+            "2023": "GR2023",
+            "2024": "GR2024"
         },
         "variables": {
             "id" : "Institutional unique identifier ID; though UNITIDs can vary over time due to instutions splitting, this variable is generally consistent for an institution over time.", 
@@ -320,8 +323,8 @@
         }
     },
     "cip": {
-        "description": "Provides subject field codes for subjects in a given year; should be used with Completion data; available for years 1984-2023.",
-        "years_available": [1984,2023],
+        "description": "Provides subject field codes for subjects in a given year; should be used with Completion data; available for years 1984-2024.",
+        "years_available": [1984,2024],
         "endpoints": {
             "1984": "C1984_CIP",
             "1985": "C1985_CIP",
@@ -362,7 +365,8 @@
             "2020": "C2020_A",
             "2021": "C2021_A",
             "2022": "C2022_A",
-            "2023": "C2023_A"
+            "2023": "C2023_A",
+            "2024": "C2024_A"
         },
         "variables": {
             "year" : "Survey year. Note that the cohort being tracked is the cohort that started either six years back (for bachelor) or three years back (for associate).",

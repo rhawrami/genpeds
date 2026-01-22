@@ -223,7 +223,7 @@ def clean_enrollment(enrollment_dir: str = 'enrollmentdata',
         (lambda y: y in [1987,1988,1989], 'line in [14,28]'),
         (lambda y: y == 1999, 'line in [32,52,16]'),
         (lambda y:  y in range(2000,2009), 'line in [11,25,9,23]'),
-        (lambda y: y in range(2009,2024), 'line in [11,25]')
+        (lambda y: y in range(2009,2025), 'line in [11,25]')
     ]
     
     df_list = []  
@@ -497,7 +497,7 @@ def clean_graduation(graduation_dir: str = 'graduationdata',
             denom = 29
             num = 30
         else:
-            raise  ValueError("deg_level must be 'assc', 'bach', 'mast' or 'doct'")
+            raise ValueError("deg_level must be 'assc', 'bach'")
 
         grads = df_filtered.query(deg_query)
         pivoted_grads = grads.pivot(index='id', columns='grtype', values=['totmen', 'totwomen', # get cohort and grads

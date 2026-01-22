@@ -24,19 +24,19 @@ def get_year_iter(subject: str,
     :param subject: string identifying which subject data to download. The subjects available are:
      ['characteristics', 'admissions', 'enrollment', 'completion', 'cip', 'graduation']
     
-    :param year_range: tuple of year integers (indicates a range), iterable of year integers (indicates group of individual years), or single year to pull data from. Data for 'characteristics', 'enrollment' and 'completion' are available for years 1984-2023, while 'graduation' is available for years 2000-2023. Defaults to all available years for a subject.
+    :param year_range: tuple of year integers (indicates a range), iterable of year integers (indicates group of individual years), or single year to pull data from. Data for 'characteristics', 'enrollment' and 'completion' are available for years 1984-2024, while 'graduation' is available for years 2000-2024. Defaults to all available years for a subject.
     '''
     subject = subject.lower()
 
     if not year_range:
         if subject == 'graduation':
-            start, end = 2000, 2023
+            start, end = 2000, 2024
             iter_range = list(range(start, end + 1))  # default for graduation data
         elif subject == 'admissions':
-            start, end = 2001, 2023
+            start, end = 2001, 2024
             iter_range = list(range(start, end + 1))  # default for admissions data
         else:
-            start, end = 1984, 2023
+            start, end = 1984, 2024
             iter_range = list(range(start, end + 1))  # default for all other data
     else:
         if isinstance(year_range, tuple):
@@ -92,6 +92,10 @@ def download_a_file(subject: str,
     endpoint = get_file_endpoint(subject, year, cfg) 
     endpoint_url = url_template.format(endpoint)
 
+    # for some reason, some 2024 files needs different url
+    if year == 2024 and subject in ['admissions', 'enrollment', 'graduation']:
+        endpoint_url = f'https://nces.ed.gov/ipeds/data-generator?year={year}&tableName={endpoint}'
+
     try:
         r = requests.get(endpoint_url)  
     except requests.HTTPError as er:
@@ -131,23 +135,23 @@ def scrape_ipeds_data(subject: str = 'characteristics',
     :param subject: string identifying which subject data to download. The subjects available are:
      ['characteristics', 'admissions', 'enrollment', 'completion', 'cip', 'graduation']
     
-    :param year_range: tuple of year integers (indicates a range), iterable of year integers (indicates group of individual years), or single year to pull data from. Data for 'characteristics', 'enrollment' and 'completion' are available for years 1984-2023, while 'graduation' is available for years 2000-2023. Defaults to all available years for a subject.
+    :param year_range: tuple of year integers (indicates a range), iterable of year integers (indicates group of individual years), or single year to pull data from. Data for 'characteristics', 'enrollment' and 'completion' are available for years 1984-2024, while 'graduation' is available for years 2000-2024. Defaults to all available years for a subject.
 
     :param see_progress: boolean that, when true, prints completion statement for extraction of each year. If false, no messages printed.
     
     ## available data
 
-    - :characteristics: institutional characteristics, like a school's name, address. Certain variables, like a school's longitude and latitude are only available in later years. Available for years 1984-2023.
+    - :characteristics: institutional characteristics, like a school's name, address. Certain variables, like a school's longitude and latitude are only available in later years. Available for years 1984-2024.
 
-    - :admissions: Admissions data, like number of applications and acceptances by gender. Available for years 2001-2023.
+    - :admissions: Admissions data, like number of applications and acceptances by gender. Available for years 2001-2024.
 
-    - :enrollment: fall enrollment by gender and institutional level (e.g., 4-year undergraduate program), with most years including enrollment by race and gender. Available for years 1984-2023.
+    - :enrollment: fall enrollment by gender and institutional level (e.g., 4-year undergraduate program), with most years including enrollment by race and gender. Available for years 1984-2024.
 
-    - :completion: completion of degrees by gender, level of degree and subject field (e.g., Bachelor's in Economics), with most years including completion by race and gender. Available for years 1984-2023.
+    - :completion: completion of degrees by gender, level of degree and subject field (e.g., Bachelor's in Economics), with most years including completion by race and gender. Available for years 1984-2024.
 
-    - :cip: CIP, or Classification of Instructional Programs, are key-value pairs for subject study fields. CIP's vary by year, and are relevant to identify subject field in completion data. Available for years 1984-2023.
+    - :cip: CIP, or Classification of Instructional Programs, are key-value pairs for subject study fields. CIP's vary by year, and are relevant to identify subject field in completion data. Available for years 1984-2024.
 
-    - :graduation: number of cohorts and graduates by gender, institutional level and graduation measure (e.g., students earning a bachelor's degree within 6 years of entering). Available for years 2000-2023.
+    - :graduation: number of cohorts and graduates by gender, institutional level and graduation measure (e.g., students earning a bachelor's degree within 6 years of entering). Available for years 2000-2024.
     '''
     dir = f'{subject}data'
     prefix = subject
