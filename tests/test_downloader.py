@@ -9,18 +9,18 @@ from genpeds import scrape_ipeds_data
     # characteristics
     ('characteristics', (1990,2003)),
     ('characteristics', [2002,2004,2006,2008]),
-    ('characteristics', 2023),
+    ('characteristics', 2024),
     # admissions
     ('admissions', (2008,2012)),
     ('admissions', [2001,2014,2018]),
     ('admissions', 2022),
     # enrollment
+    ('enrollment', [2018,2020,2024]),
     ('enrollment', (1985,1990)),
-    ('enrollment', [2018,2020,2023]),
     ('enrollment', 2002),
     # completion
     ('completion', (1984,1989)),
-    ('completion', [2003,2015,2023]),
+    ('completion', [2003,2015,2024]),
     ('completion', 2010),
     # graduation
     ('graduation', (2000,2005)),
