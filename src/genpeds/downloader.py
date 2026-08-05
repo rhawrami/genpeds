@@ -84,17 +84,18 @@ def download_a_file(subject: str,
     dir = f'{subject}data'  # directory subject name
     prefix = subject    # file subject prefix
 
+    spec_prefix = 'https://nces.ed.gov/ipeds/complete-data-files/' if year > 2022 else 'https://nces.ed.gov/ipeds/datacenter/data/'
     if subject != 'cip':
-        url_template = 'https://nces.ed.gov/ipeds/datacenter/data/{}.zip'
+        url_template = spec_prefix + '{}.zip'
     else:
-        url_template = 'https://nces.ed.gov/ipeds/datacenter/data/{}_Dict.zip'
+        url_template = spec_prefix + '{}_Dict.zip'
     
     endpoint = get_file_endpoint(subject, year, cfg) 
     endpoint_url = url_template.format(endpoint)
 
     # for some reason, some 2024 files needs different url
-    if year == 2024 and subject in ['admissions', 'enrollment', 'graduation']:
-        endpoint_url = f'https://nces.ed.gov/ipeds/data-generator?year={year}&tableName={endpoint}'
+    # if year == 2024 and subject in ['admissions', 'enrollment', 'graduation']:
+    #     endpoint_url = f'https://nces.ed.gov/ipeds/data-generator?year={year}&tableName={endpoint}'
 
     try:
         r = requests.get(endpoint_url)  
