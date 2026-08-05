@@ -1,13 +1,21 @@
 import os
 import glob
 import shutil
+import json
+from pathlib import Path
 
 import pandas as pd
 import pytest
 
 from genpeds.cleaners import CLEANERS
 from genpeds import scrape_ipeds_data
-from genpeds.config import VARIABLE_DICT
+
+
+def get_cfg() -> dict:
+    endpoint_path = Path('src') / 'genpeds' / 'cfg.json'
+    with open(endpoint_path, 'r') as cfgjf:
+        cfg = json.load(cfgjf)
+    return cfg
 
 def download_data_for_test():
     '''downloads data for test, assuming not already downloaded'''
@@ -48,7 +56,7 @@ def test_basic_cleaners(subject):
     download_data_for_test() # scrape data if needed
 
     subject_cleaner = CLEANERS[subject] # subject-specific cleaner function
-    subject_var_dict = VARIABLE_DICT[subject].keys() # expected variables returned
+    subject_var_dict = get_cfg()[subject]['variables'].keys() # expected variables returned
 
     try:
         df = subject_cleaner()
@@ -70,7 +78,7 @@ def test_enrollment_cleaner(lev):
     download_data_for_test() # scrape data if needed
 
     subject_cleaner = CLEANERS['enrollment'] # enrollment cleaner function
-    subject_var_dict = VARIABLE_DICT['enrollment'].keys() # expected variables returned
+    subject_var_dict = get_cfg()['enrollment']['variables'].keys() # expected variables returned
 
     try:
         df = subject_cleaner(student_level=lev) # tries 'undergrad' and 'grad'
@@ -94,7 +102,7 @@ def test_completion_cleaner(lev):
     download_data_for_test() # scrape data if needed
 
     subject_cleaner = CLEANERS['completion'] # completion cleaner function
-    subject_var_dict = VARIABLE_DICT['completion'].keys() # expected variables returned
+    subject_var_dict = get_cfg()['completion']['variables'].keys() # expected variables returned
 
     try:
         df = subject_cleaner(level=lev) # tries 'assc', 'bach', 'mast', 'doct'
@@ -116,7 +124,7 @@ def test_graduation_cleaner(lev):
     download_data_for_test() # scrape data if needed
 
     subject_cleaner = CLEANERS['graduation'] # graduation cleaner function
-    subject_var_dict = VARIABLE_DICT['graduation'].keys() # expected variables returned
+    subject_var_dict = get_cfg()['graduation']['variables'].keys() # expected variables returned
 
     try:
         df = subject_cleaner(deg_level=lev) # tries 'undergrad' and 'grad'
