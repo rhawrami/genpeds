@@ -22,14 +22,17 @@ def get_year_iter(subject: str,
     get year iterable based on subject and year input
 
     :param subject: string identifying which subject data to download. The subjects available are:
-     ['characteristics', 'admissions', 'enrollment', 'completion', 'cip', 'graduation']
+     ['characteristics', 'admissions', 'enrollment', 'retention', 'completion', 'cip', 'graduation']
     
-    :param year_range: tuple of year integers (indicates a range), iterable of year integers (indicates group of individual years), or single year to pull data from. Data for 'characteristics', 'enrollment' and 'completion' are available for years 1984-2024, while 'graduation' is available for years 2000-2024. Defaults to all available years for a subject.
+    :param year_range: tuple of year integers (indicates a range), iterable of year integers (indicates group of individual years), or single year to pull data from. Retention is available for 2003-2024; other subjects have their own year ranges. Defaults to all available years for a subject.
     '''
     subject = subject.lower()
 
     if not year_range:
-        if subject == 'graduation':
+        if subject == 'retention':
+            start, end = 2003, 2024
+            iter_range = list(range(start, end + 1))
+        elif subject == 'graduation':
             start, end = 2000, 2024
             iter_range = list(range(start, end + 1))  # default for graduation data
         elif subject == 'admissions':
@@ -50,6 +53,9 @@ def get_year_iter(subject: str,
         else:
             raise TypeError('Please enter a tuple range, list of integers, or a single integer')
     
+    if subject == 'retention' and any(year < 2003 or year > 2024 for year in iter_range):
+        raise ValueError('Retention data is available for years 2003-2024')
+
     return iter_range
 
 
@@ -134,9 +140,9 @@ def scrape_ipeds_data(subject: str = 'characteristics',
     downloads NCES IPEDS data on specified years for a defined subject.
     
     :param subject: string identifying which subject data to download. The subjects available are:
-     ['characteristics', 'admissions', 'enrollment', 'completion', 'cip', 'graduation']
+     ['characteristics', 'admissions', 'enrollment', 'retention', 'completion', 'cip', 'graduation']
     
-    :param year_range: tuple of year integers (indicates a range), iterable of year integers (indicates group of individual years), or single year to pull data from. Data for 'characteristics', 'enrollment' and 'completion' are available for years 1984-2024, while 'graduation' is available for years 2000-2024. Defaults to all available years for a subject.
+    :param year_range: tuple of year integers (indicates a range), iterable of year integers (indicates group of individual years), or single year to pull data from. Retention is available for 2003-2024; other subjects have their own year ranges. Defaults to all available years for a subject.
 
     :param see_progress: boolean that, when true, prints completion statement for extraction of each year. If false, no messages printed.
     
@@ -147,6 +153,8 @@ def scrape_ipeds_data(subject: str = 'characteristics',
     - :admissions: Admissions data, like number of applications and acceptances by gender. Available for years 2001-2024.
 
     - :enrollment: fall enrollment by gender and institutional level (e.g., 4-year undergraduate program), with most years including enrollment by race and gender. Available for years 1984-2024.
+
+    - :retention: first-year full-time and part-time undergraduate retention rates and (from 2007) cohort counts. Available for years 2003-2024 in the Fall Enrollment D files.
 
     - :completion: completion of degrees by gender, level of degree and subject field (e.g., Bachelor's in Economics), with most years including completion by race and gender. Available for years 1984-2024.
 

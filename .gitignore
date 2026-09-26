@@ -6,9 +6,12 @@ venv/
 enrollmentdata/
 completiondata/
 graduationdata/
+retentiondata/
 characteristicsdata/
 cipdata/
 admissionsdata/
 notebooks/
 .env
 TODO.txt
+scratch/
+screenshots/

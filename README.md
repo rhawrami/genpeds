@@ -138,6 +138,32 @@ enrolldat = Enrollment(year_range=(1984,2023))
 enroll_df = enrolldat.run(merge_with_char=False,
                           student_level='undergrad')
 ```
+- **Retention** (first-year undergraduate retention for full-time and part-time entering students; available 2003–2024)
+```python
+from genpeds import Retention
+
+retention = Retention(year_range=[2003, 2016, 2024])
+retention.get_available_years()  # (2003, 2024)
+retention.lookup_var('ft_retention_rate')
+
+# Downloads to retentiondata/ and returns one row per institution and fall year.
+retention_df = retention.run(merge_with_char=True, rm_disk=False)
+
+# Alternatively, clean previously downloaded files without downloading again:
+retention_df = retention.clean(retention_dir='retentiondata')
+```
+
+`year` is the fall in which retention is measured, and `cohort_year` is the preceding fall. `ft_retention_rate` and `pt_retention_rate` are NCES-published percentages, available from 2003. Cohort counts, exclusions, adjusted denominators, and numbers retained start in 2007; study-abroad inclusions start in 2016. Unavailable fields are missing, not zero. Each measure also has a `_status` field carrying its NCES reporting/imputation flag. The input cohorts are first-time, degree/certificate-seeking undergraduates; this series is not disaggregated by gender. `rm_disk=True` removes the downloaded directory after cleaning (and Characteristics downloads if merged).
+
+The year-specific [Fall Enrollment D files and dictionaries](https://nces.ed.gov/ipeds/datacenter/Default.aspx?gotoReportId=7&fromIpeds=true) explain these boundaries:
+
+| Reporting years | Retention fields present |
+| --- | --- |
+| 2003–2006 | Published full-time/part-time rates and their status flags only; no prior-fall cohort counts. |
+| 2007–2015 | Adds entering cohorts, exclusions, adjusted cohorts, and numbers retained. |
+| 2016–2024 | Adds study-abroad inclusions to the adjusted cohort calculation. |
+
+The cleaner trims raw header whitespace (including a trailing space on an early `RET_PCP` column) and keeps the published rates rather than recomputing rounded percentages from counts. Status flags distinguish reported (`R`), not-applicable (`A`), blank (`B`), implied-zero (`Z`), and other corrected or imputed values; consult the dictionary for a given year before interpreting its flags. `year` refers to the retention measurement fall, **not** the fall when the students entered.
 - **Completion** (e.g., degree completion by race/gender/subject/level, etc.) (available 1984-2023)
 ```python
 from genpeds import scrape_ipeds_data, Completion
@@ -195,4 +221,3 @@ pytest tests/
 ```
 
 This will run all tests in the `tests/` directory to verify that the installation and package functionality are working correctly.
-

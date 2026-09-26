@@ -46,6 +46,15 @@ VARIABLE_RENAME = {
         'efrace09' : 'hspmen', 'efrace10' : 'hspwomen', 'efrace07' : 'asnmen', 'efrace08' : 'asnwomen'
     },
 
+    'retention' : {
+        'rrftct': 'ft_cohort', 'rrftex': 'ft_exclusions',
+        'rrftin': 'ft_inclusions', 'rrftcta': 'ft_adjusted_cohort',
+        'ret_nmf': 'ft_retained', 'ret_pcf': 'ft_retention_rate',
+        'rrptct': 'pt_cohort', 'rrptex': 'pt_exclusions',
+        'rrptin': 'pt_inclusions', 'rrptcta': 'pt_adjusted_cohort',
+        'ret_nmp': 'pt_retained', 'ret_pcp': 'pt_retention_rate'
+    },
+
     'completion' : {
         'unitid' : 'id', 'cipcode' : 'cip', 'awlevel' : 'awlevel',
         'crace15' : 'totmen', 'crace16' : 'totwomen',
@@ -305,6 +314,56 @@ def clean_enrollment(enrollment_dir: str = 'enrollmentdata',
     return master_df
 
 
+def clean_retention(retention_dir: str = 'retentiondata',
+                    year_range: Optional[Union[Tuple[int,int], List[int], int]] = None) -> pd.DataFrame:
+    '''Return one row per institution and retention year from Fall Enrollment D.
+
+    Rates are NCES's published percentages, not recomputed from counts. The
+    preceding fall's entering cohort is ``cohort_year``. Cohort counts were not
+    included until 2007, and study-abroad inclusions first appear in 2016;
+    unavailable fields remain missing rather than being treated as zero.
+    '''
+    rename_dict = VARIABLE_RENAME['retention']
+    status_dict = {'x' + raw: name + '_status' for raw, name in rename_dict.items()}
+    requested = set(get_year_iter('retention', year_range)) if year_range is not None else None
+    frames = []
+    found = set()
+
+    for file in sorted(os.listdir(retention_dir)):
+        match = re.fullmatch(r'retention_(\d{4})\.csv', file, flags=re.IGNORECASE)
+        if not match:
+            continue
+        year = int(match.group(1))
+        if requested is not None and year not in requested:
+            continue
+        if not 2003 <= year <= 2024:
+            continue
+
+        df = pd.read_csv(os.path.join(retention_dir, file), dtype=str)
+        df.columns = df.columns.str.lower().str.strip()
+        required = {'unitid', 'ret_pcf', 'ret_pcp'}
+        if not required.issubset(df.columns):
+            raise ValueError(f'{file} is missing retention fields: {sorted(required - set(df.columns))}')
+
+        df = df.reindex(columns=['unitid', *rename_dict, *status_dict])
+        df = df.rename(columns={'unitid': 'id', **rename_dict, **status_dict})
+        df['id'] = df['id'].str.strip()
+        for name in rename_dict.values():
+            df[name] = pd.to_numeric(df[name], errors='coerce')
+        for name in status_dict.values():
+            df[name] = df[name].astype('string').str.strip()
+        df.insert(1, 'year', year)
+        df.insert(2, 'cohort_year', year - 1)
+        frames.append(df)
+        found.add(year)
+
+    if requested is not None and requested - found:
+        raise FileNotFoundError(f'Missing downloaded retention years: {sorted(requested - found)}')
+    if not frames:
+        raise FileNotFoundError(f'No retention CSV files found in {retention_dir}')
+    return pd.concat(frames, ignore_index=True)
+
+
 def clean_completion(completion_dir: str = 'completiondata', 
                      level: str = 'bach',
                      year_range: Optional[Union[Tuple[int,int], List[int], int]] = None) -> pd.DataFrame:
@@ -531,6 +590,7 @@ CLEANERS = {
     'characteristics' : clean_characteristics,
     'admissions' : clean_admissions,
     'enrollment' : clean_enrollment,
+    'retention' : clean_retention,
     'completion' : clean_completion,
     'cip' : clean_cip,
     'graduation' : clean_graduation

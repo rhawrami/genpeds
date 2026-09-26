@@ -6,7 +6,7 @@ from typing import Dict, Optional, Tuple, List, Union
 
 import pandas as pd
 
-from genpeds.downloader import scrape_ipeds_data
+from genpeds.downloader import scrape_ipeds_data, get_year_iter
 from genpeds.cleaners import CLEANERS
 
 
@@ -303,6 +303,45 @@ class Enrollment(IPDS):
         df = self.clean(rm_disk=rm_disk, student_level=student_level)
         if merge_with_char:
             char_df = Characteristics(year_range=self.year_range).run(see_progress=see_progress, rm_disk=rm_disk)
+            df = df.merge(char_df, on=['id', 'year'])
+        return df
+
+
+class Retention(IPDS):
+    '''First-year undergraduate retention from the Fall Enrollment D files.'''
+    subject = 'retention'
+
+    def __init__(self,
+                 year_range: Optional[Union[Tuple[int,int], List[int], int]] = None):
+        '''IPEDS first-year undergraduate retention, available for 2003-2024.
+
+        ``year_range`` accepts an inclusive tuple, a list of years, or one year.
+        The reported year is the fall in which retention is measured; the
+        entering cohort is from the preceding fall.
+        '''
+        get_year_iter(self.subject, year_range)  # check availability before downloading
+        super().__init__(year_range)
+
+    def clean(self,
+              retention_dir: str = 'retentiondata',
+              rm_disk: bool = False) -> pd.DataFrame:
+        '''Clean downloaded retention files, optionally removing their directory.'''
+        df = CLEANERS[self.subject](retention_dir=retention_dir,
+                                    year_range=self.year_range)
+        if rm_disk:
+            shutil.rmtree(retention_dir)
+        return df
+
+    def run(self,
+            see_progress: bool = False,
+            merge_with_char: bool = False,
+            rm_disk: bool = False) -> pd.DataFrame:
+        '''Download and clean retention data; optionally join characteristics.'''
+        self.scrape(see_progress=see_progress)
+        df = self.clean(rm_disk=rm_disk)
+        if merge_with_char:
+            char_df = Characteristics(year_range=self.year_range).run(
+                see_progress=see_progress, rm_disk=rm_disk)
             df = df.merge(char_df, on=['id', 'year'])
         return df
 
