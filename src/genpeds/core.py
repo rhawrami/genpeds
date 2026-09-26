@@ -7,7 +7,18 @@ from typing import Dict, Optional, Tuple, List, Union
 import pandas as pd
 
 from genpeds.downloader import scrape_ipeds_data, get_year_iter
-from genpeds.cleaners import CLEANERS
+from genpeds.cleaners import CLEANERS, _validate_om_selection
+
+
+def _remove_download_dir(directory: str) -> None:
+    '''Refuse to recursively remove the working directory or its ancestors.'''
+    path = Path(directory)
+    resolved = path.resolve()
+    cwd = Path.cwd().resolve()
+    if (path.is_symlink() or resolved == cwd or resolved in cwd.parents
+            or resolved == Path.home().resolve()):
+        raise ValueError(f'Unsafe download directory for rm_disk: {directory}')
+    shutil.rmtree(path)
 
 
 def _merge_characteristics(df: pd.DataFrame, char_df: pd.DataFrame) -> pd.DataFrame:
@@ -131,7 +142,7 @@ class Characteristics(IPDS):
         '''
         df = CLEANERS[self.subject](char_dir,self.year_range)
         if rm_disk:
-            shutil.rmtree(char_dir)
+            _remove_download_dir(char_dir)
         return df
     
 
@@ -204,7 +215,7 @@ class Admissions(IPDS):
         df = CLEANERS[self.subject](admissions_dir=admit_dir,
                                     year_range=self.year_range)
         if rm_disk:
-            shutil.rmtree(admit_dir) # removes data from disk
+            _remove_download_dir(admit_dir) # removes data from disk
         return df
     
     
@@ -285,7 +296,7 @@ class Enrollment(IPDS):
                                     student_level=student_level,
                                     year_range=self.year_range)
         if rm_disk:
-            shutil.rmtree(enroll_dir)
+            _remove_download_dir(enroll_dir)
         return df
     
 
@@ -336,7 +347,7 @@ class DistanceEnrollment(IPDS):
                                     student_level=student_level,
                                     year_range=self.year_range)
         if rm_disk:
-            shutil.rmtree(distance_dir)
+            _remove_download_dir(distance_dir)
         return df
 
     def run(self,
@@ -373,7 +384,7 @@ class TwelveMonthEnrollment(IPDS):
                                     student_level=student_level,
                                     year_range=self.year_range)
         if rm_disk:
-            shutil.rmtree(enroll_dir)
+            _remove_download_dir(enroll_dir)
         return df
 
     def run(self,
@@ -413,7 +424,7 @@ class Retention(IPDS):
         df = CLEANERS[self.subject](retention_dir=retention_dir,
                                     year_range=self.year_range)
         if rm_disk:
-            shutil.rmtree(retention_dir)
+            _remove_download_dir(retention_dir)
         return df
 
     def run(self,
@@ -461,9 +472,9 @@ class Tuition(IPDS):
                                     year_range=self.year_range)
         if rm_disk:
             if reporter in ('academic', 'both'):
-                shutil.rmtree(tuition_dir)
+                _remove_download_dir(tuition_dir)
             if reporter in ('program', 'both'):
-                shutil.rmtree(program_dir)
+                _remove_download_dir(program_dir)
         return df
 
     def run(self,
@@ -509,9 +520,9 @@ class StudentAid(IPDS):
                                     reporter=reporter,
                                     year_range=self.year_range)
         if rm_disk:
-            shutil.rmtree(aid_dir)
+            _remove_download_dir(aid_dir)
             if 2024 in get_year_iter(self.subject, self.year_range) and Path(net_price_dir).is_dir():
-                shutil.rmtree(net_price_dir)
+                _remove_download_dir(net_price_dir)
         return df
 
     def run(self,
@@ -547,7 +558,7 @@ class VeteransAid(IPDS):
         '''Clean separately reported military benefits for UG and grad students.'''
         df = CLEANERS[self.subject](aid_dir=aid_dir, year_range=self.year_range)
         if rm_disk:
-            shutil.rmtree(aid_dir)
+            _remove_download_dir(aid_dir)
         return df
 
     def run(self,
@@ -595,7 +606,7 @@ class Cip(IPDS):
         df = CLEANERS[self.subject](cip_codes_dir=cip_dir,
                                     year_range=self.year_range)
         if rm_disk:
-            shutil.rmtree(cip_dir)
+            _remove_download_dir(cip_dir)
         return df
     
 
@@ -676,7 +687,7 @@ class Completion(IPDS):
                                     major=major,
                                     year_range=self.year_range)
         if rm_disk:
-            shutil.rmtree(complete_dir)
+            _remove_download_dir(complete_dir)
         return df
     
 
@@ -750,7 +761,7 @@ class Completers(IPDS):
                                     degree_level=degree_level,
                                     year_range=self.year_range)
         if rm_disk:
-            shutil.rmtree(completers_dir if degree_level == 'all' else award_dir)
+            _remove_download_dir(completers_dir if degree_level == 'all' else award_dir)
         return df
 
     def run(self,
@@ -825,7 +836,7 @@ class Graduation(IPDS):
                                     deg_level=degree_level,
                                     year_range=self.year_range)
         if rm_disk:
-            shutil.rmtree(grad_dir)
+            _remove_download_dir(grad_dir)
         return df
     
 
@@ -876,7 +887,7 @@ class Graduation200(IPDS):
                                     cohort_type=cohort_type,
                                     year_range=self.year_range)
         if rm_disk:
-            shutil.rmtree(graduation_dir)
+            _remove_download_dir(graduation_dir)
         return df
 
     def run(self,
@@ -889,6 +900,48 @@ class Graduation200(IPDS):
             raise ValueError("cohort_type must be 'both', 'bachelor', or 'less_than_four_year'")
         self.scrape(see_progress=see_progress)
         df = self.clean(cohort_type=cohort_type, rm_disk=rm_disk)
+        if merge_with_char:
+            char_df = Characteristics(year_range=self.year_range).run(
+                see_progress=see_progress, rm_disk=rm_disk)
+            df = _merge_characteristics(df, char_df)
+        return df
+
+
+class OutcomeMeasures(IPDS):
+    '''Four-/six-/eight-year awards and subsequent enrollment for UG entrants.'''
+    subject = 'outcome_measures'
+
+    def __init__(self,
+                 year_range: Optional[Union[Tuple[int,int], List[int], int]] = None):
+        '''OM reporting/status years 2015-2024 (2017+ expanded Pell cohorts).'''
+        get_year_iter(self.subject, year_range)
+        super().__init__(year_range)
+
+    def clean(self,
+              cohort_type: str = 'all',
+              pell_group: str = 'total',
+              outcomes_dir: str = 'outcome_measuresdata',
+              rm_disk: bool = False) -> pd.DataFrame:
+        '''Clean OM source rows without aggregating overlapping cohorts.'''
+        df = CLEANERS[self.subject](outcomes_dir=outcomes_dir,
+                                    cohort_type=cohort_type,
+                                    pell_group=pell_group,
+                                    year_range=self.year_range)
+        if rm_disk:
+            _remove_download_dir(outcomes_dir)
+        return df
+
+    def run(self,
+            cohort_type: str = 'all',
+            pell_group: str = 'total',
+            see_progress: bool = False,
+            merge_with_char: bool = False,
+            rm_disk: bool = False) -> pd.DataFrame:
+        '''Download and clean OM, optionally attaching Characteristics.'''
+        _validate_om_selection(cohort_type, pell_group, self.year_range)
+        self.scrape(see_progress=see_progress)
+        df = self.clean(cohort_type=cohort_type, pell_group=pell_group,
+                        rm_disk=rm_disk)
         if merge_with_char:
             char_df = Characteristics(year_range=self.year_range).run(
                 see_progress=see_progress, rm_disk=rm_disk)

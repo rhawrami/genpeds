@@ -28,8 +28,10 @@ VARIABLE_RENAME = {
         'applcnm' : 'men_applied', 'applcnw' : 'women_applied', 
         'admssnm' : 'men_admitted', 'admssnw' : 'women_admitted',
         'satpct' : 'share_submit_sat', 'actpct' : 'share_submit_act',                                      
+        'satnum' : 'num_submit_sat', 'actnum' : 'num_submit_act',
         'satvr25' : 'sat_rw_25', 'satvr75' : 'sat_rw_75', 
         'satmt25' : 'sat_math_25', 'satmt75' : 'sat_math_75', 
+        'satmt50' : 'sat_math_50',
         'actcm25' : 'act_comp_25', 'actcm75' : 'act_comp_75',
         'acten25' : 'act_eng_25', 'acten75' : 'act_eng_75', 
         'actmt25' : 'act_math_25', 'actmt75' : 'act_math_75',
@@ -37,8 +39,28 @@ VARIABLE_RENAME = {
         'enrlptm' : 'men_pt_enrolled', 'enrlptw' : 'women_pt_enrolled',
         'enrlm' : 'men_enrolled', 'enrlw' : 'women_enrolled',
         'applcn' : 'tot_applied', 'admssn' : 'tot_admitted', 'enrlt' : 'tot_enrolled',
+        'enrlft' : 'tot_ft_enrolled', 'enrlpt' : 'tot_pt_enrolled',
+        'applcnan' : 'another_gender_applied', 'applcnun' : 'gender_unknown_applied',
+        'admssnan' : 'another_gender_admitted', 'admssnun' : 'gender_unknown_admitted',
+        'enrlan' : 'another_gender_enrolled', 'enrlun' : 'gender_unknown_enrolled',
+        'enrlftan' : 'another_gender_ft_enrolled',
+        'enrlftun' : 'gender_unknown_ft_enrolled',
+        'enrlptan' : 'another_gender_pt_enrolled',
+        'enrlptun' : 'gender_unknown_pt_enrolled',
         'acten50' : 'act_eng_50', 'actmt50' : 'act_math_50', 'actcm50' : 'act_comp_50',
-        'satvr50' : 'sat_rw_50', 'satmt50' : 'sat_math_50'
+        'satvr50' : 'sat_rw_50',
+        'admcon1' : 'consider_gpa_code',
+        'admcon2' : 'consider_class_rank_code',
+        'admcon3' : 'consider_school_record_code',
+        'admcon4' : 'consider_college_prep_code',
+        'admcon5' : 'consider_recommendations_code',
+        'admcon6' : 'consider_competencies_code',
+        'admcon7' : 'consider_test_scores_code',
+        'admcon8' : 'consider_english_proficiency_code',
+        'admcon9' : 'consider_other_tests_code',
+        'admcon10' : 'consider_work_experience_code',
+        'admcon11' : 'consider_essay_code',
+        'admcon12' : 'consider_legacy_code'
     },
 
     'enrollment' : {
@@ -87,6 +109,13 @@ VARIABLE_RENAME = {
         'chrtstat' : 'chrtstat', 'section' : 'section', 
         'cohort' : 'cohort', 'unitid' : 'id', 'grtype' : 'grtype'
     }
+}
+
+
+ADMISSION_CONSIDERATIONS = {
+    output.removesuffix('_code'): output
+    for raw, output in VARIABLE_RENAME['admissions'].items()
+    if raw.startswith('admcon')
 }
 
 
@@ -202,6 +231,56 @@ GR200_FIELDS = {
 GR200_FLAG_EXCEPTIONS = {'banc200a': 'xbanc20a', 'l4nc200a': 'xl4nc20a'}
 
 
+OM_FIELDS = {
+    'revised_cohort_6': 'omrcht6', 'exclusions_6': 'omexcl6',
+    'adjusted_cohort_6': 'omacht6',
+    'revised_cohort_8': 'omrcht8', 'exclusions_8': 'omexcl8',
+    'adjusted_cohort_8': 'omacht8',
+    'revised_cohort': 'omrchrt', 'exclusions': 'omexcls',
+    'adjusted_cohort': 'omachrt',
+    'awards_4': 'omawdn4', 'awards_4_pct': 'omawdp4',
+    'awards_6': 'omawdn6', 'awards_6_pct': 'omawdp6',
+    'awards_8': 'omawdn8', 'awards_8_pct': 'omawdp8',
+    'certificate_4': 'omcert4', 'associate_4': 'omassc4',
+    'bachelor_4': 'ombach4',
+    'certificate_6': 'omcert6', 'associate_6': 'omassc6',
+    'bachelor_6': 'ombach6',
+    'certificate_8': 'omcert8', 'associate_8': 'omassc8',
+    'bachelor_8': 'ombach8',
+    'still_enrolled_here_8': 'omenryi',
+    'subsequently_enrolled_elsewhere_8': 'omenrai',
+    'enrollment_unknown_8': 'omenrun', 'no_award_8': 'omnoawd',
+    'enrolled_here_or_elsewhere_8_pct': 'omenrtp',
+    'still_enrolled_here_8_pct': 'omenryp',
+    'subsequently_enrolled_elsewhere_8_pct': 'omenrap',
+    'enrollment_unknown_8_pct': 'omenrup'
+}
+
+OM_LEGACY_COHORTS = {
+    '1': 'first_time_full_time', '2': 'first_time_part_time',
+    '3': 'non_first_time_full_time', '4': 'non_first_time_part_time'
+}
+OM_EXPANDED_COHORTS = {
+    str(10 * group + pell): (label, pell_label)
+    for group, label in enumerate((*OM_LEGACY_COHORTS.values(), 'total'), start=1)
+    for pell, pell_label in enumerate(('total', 'pell', 'non_pell'))
+}
+
+
+def _validate_om_selection(cohort_type, pell_group, year_range):
+    choices = {*OM_LEGACY_COHORTS.values(), 'all', 'total'}
+    if cohort_type not in choices:
+        raise ValueError(f'cohort_type must be one of {sorted(choices)}')
+    if pell_group not in ('total', 'pell', 'non_pell', 'all'):
+        raise ValueError("pell_group must be 'total', 'pell', 'non_pell', or 'all'")
+    years = get_year_iter('outcome_measures', year_range)
+    if any(year < 2017 for year in years):
+        if cohort_type == 'total':
+            raise ValueError('An overall total entering OM cohort is available from 2017 only')
+        if pell_group in ('pell', 'non_pell'):
+            raise ValueError('Pell/non-Pell OM cohorts are available from 2017 only')
+
+
 COMPLETERS_FIELDS = {
     'total_completers': 'cstotlt', 'men': 'cstotlm', 'women': 'cstotlw',
     'american_indian': 'csaiant', 'asian': 'csasiat', 'black': 'csbkaat',
@@ -302,76 +381,103 @@ def clean_characteristics(characteristics_dir: str = 'characteristicsdata',
 
 
 def clean_admissions(admissions_dir: str = 'admissionsdata',
-                     year_range: Optional[Union[Tuple[int,int], List[int], int]] = None) -> pd.DataFrame:
+                      year_range: Optional[Union[Tuple[int,int], List[int], int]] = None) -> pd.DataFrame:
     '''
     cleans yearly admissions data and returns complete admissions data
     
     :param admissions_dir: directory where raw admissions data is located
     :year_range: range of years to clean data from. This is in case that you have more data than you want to actually clean and return
     '''
-    warnings.filterwarnings('ignore', category=FutureWarning)
-    sorted_files = sorted(os.listdir(admissions_dir)) # unnecessary, but helps with error checking
     rename_dict = VARIABLE_RENAME['admissions']
+    requested = set(get_year_iter('admissions', year_range)) if year_range is not None else None
+    frames = []
+    found = set()
 
-    master_df = pd.DataFrame()
-    
-    for file in sorted_files:
+    for file in sorted(os.listdir(admissions_dir)):
+        match = re.fullmatch(r'admissions_(\d{4})\.csv', file, flags=re.IGNORECASE)
+        if not match:
+            continue
+        year_num = int(match.group(1))
+        if requested is not None and year_num not in requested:
+            continue
+        if not 2001 <= year_num <= 2024:
+            continue
         file_path = os.path.join(admissions_dir, file)
-        year_num = re.split(r'_|\.', f'{file}')[1]
-        
-        if year_range:
-            year_iter = get_year_iter(subject='admissions',
-                                      year_range=year_range)
-            if int(year_num) not in year_iter:
-                continue
-
-        df = pd.read_csv(file_path, dtype=str) # read in df
-        df = df.rename(str.lower, axis='columns') # some df's have all uppercase, some have all lowercase
-        df.columns = df.columns.str.strip() # some column names have right spaces
-        
-        cols_to_filter = [col for col in rename_dict.keys() if col in df.columns] # cols to filter per year
-        df_filtered = df.reindex(columns=cols_to_filter)
-        df_filtered = df_filtered.rename(columns=rename_dict) # rename cols
-
+        df = pd.read_csv(file_path, dtype=str, index_col=False, low_memory=False,
+                         usecols=lambda c: c.lower().strip() in rename_dict)
+        df.columns = df.columns.str.lower().str.strip()
+        required = {'unitid', 'applcnm', 'applcnw', 'admssnm', 'admssnw'}
+        if not required.issubset(df.columns):
+            raise ValueError(f'{file} is missing admissions fields: {sorted(required - set(df.columns))}')
+        present = set(df.columns)
+        df_filtered = df.reindex(columns=rename_dict).rename(columns=rename_dict)
+        df_filtered['id'] = df_filtered['id'].str.strip()
         for col in df_filtered.columns:
             if col == 'id':
-                df_filtered[col] = df_filtered[col].astype(str).str.strip() # id str
+                continue
+            if col in ADMISSION_CONSIDERATIONS.values():
+                df_filtered[col] = df_filtered[col].astype('string').str.strip()
             else:
                 df_filtered[col] = pd.to_numeric(df_filtered[col], errors='coerce')
 
-        if int(year_num) == 2001:
+        if year_num == 2001:
             df_filtered['men_enrolled'] = df_filtered['men_ft_enrolled'] + df_filtered['men_pt_enrolled']
             df_filtered['women_enrolled'] = df_filtered['women_ft_enrolled'] + df_filtered['women_pt_enrolled']
-        if 'tot_applied' not in df_filtered.columns:
-            df_filtered['tot_applied'] = df_filtered['men_applied'] + df_filtered['women_applied']
-            df_filtered['tot_admitted'] = df_filtered['men_admitted'] + df_filtered['women_admitted']
-            df_filtered['tot_enrolled'] = df_filtered['men_enrolled'] + df_filtered['women_enrolled']
+        if 'enrlft' not in present:
+            df_filtered['tot_ft_enrolled'] = df_filtered['men_ft_enrolled'] + df_filtered['women_ft_enrolled']
+        if 'enrlpt' not in present:
+            df_filtered['tot_pt_enrolled'] = df_filtered['men_pt_enrolled'] + df_filtered['women_pt_enrolled']
+        for raw, target, left, right in (
+            ('applcn', 'tot_applied', 'men_applied', 'women_applied'),
+            ('admssn', 'tot_admitted', 'men_admitted', 'women_admitted'),
+            ('enrlt', 'tot_enrolled', 'men_enrolled', 'women_enrolled')
+        ):
+            if raw not in present:
+                df_filtered[target] = df_filtered[left] + df_filtered[right]
 
-        for i in ['men', 'women']:
-            df_filtered[f'accept_rate_{i}'] = np.where(
-            df_filtered[f'{i}_applied'] == 0,
-            np.nan,
-            (df_filtered[f'{i}_admitted'] / df_filtered[f'{i}_applied'] * 100)
-            )
-    
-            df_filtered[f'yield_rate_{i}'] = np.where(
-            df_filtered[f'{i}_admitted'] == 0,
-            np.nan,
-            (df_filtered[f'{i}_enrolled'] / df_filtered[f'{i}_admitted'] * 100)
-            )
-        
-        df_filtered['year'] = int(year_num) # year identifier
-        df_filtered['men_applied_share'] = df_filtered['men_applied'] / df_filtered['tot_applied'] * 100
-        df_filtered['men_admitted_share'] = df_filtered['men_admitted'] / df_filtered['tot_admitted'] * 100
+        for group in ('men', 'women'):
+            df_filtered[f'accept_rate_{group}'] = (
+                df_filtered[f'{group}_admitted'] /
+                df_filtered[f'{group}_applied'].replace(0, np.nan) * 100)
+            df_filtered[f'yield_rate_{group}'] = (
+                df_filtered[f'{group}_enrolled'] /
+                df_filtered[f'{group}_admitted'].replace(0, np.nan) * 100)
+        df_filtered['accept_rate_total'] = (
+            df_filtered['tot_admitted'] / df_filtered['tot_applied'].replace(0, np.nan) * 100)
+        df_filtered['yield_rate_total'] = (
+            df_filtered['tot_enrolled'] / df_filtered['tot_admitted'].replace(0, np.nan) * 100)
+        df_filtered['men_applied_share'] = (
+            df_filtered['men_applied'] / df_filtered['tot_applied'].replace(0, np.nan) * 100)
+        df_filtered['men_admitted_share'] = (
+            df_filtered['men_admitted'] / df_filtered['tot_admitted'].replace(0, np.nan) * 100)
 
-        master_df = pd.concat([master_df, df_filtered], ignore_index=True)
-    
-    # unneeded columns
-    admissions_df = master_df.drop(columns=['women_applied', 'women_admitted', 'women_enrolled',
-                                            'men_ft_enrolled', 'men_pt_enrolled', 'women_ft_enrolled', 'women_pt_enrolled'],
-                                   errors='ignore')
+        if year_num < 2016:
+            policy_labels = {'1': 'Required', '2': 'Recommended',
+                             '3': 'Neither required nor recommended', '4': 'Do not know'}
+        elif year_num < 2022:
+            policy_labels = {'1': 'Required', '2': 'Recommended',
+                             '3': 'Neither required nor recommended', '4': 'Do not know',
+                             '5': 'Considered but not required'}
+        else:
+            policy_labels = {'1': 'Required to be considered',
+                             '5': 'Considered if submitted',
+                             '3': 'Not considered even if submitted'}
+        for name, code in ADMISSION_CONSIDERATIONS.items():
+            labels = policy_labels.copy()
+            if year_num >= 2022 and name == 'consider_test_scores':
+                labels.update({'5': 'Test optional (considered if submitted)',
+                               '3': 'Test blind (not considered)'})
+            df_filtered[name] = df_filtered[code].map(labels).astype('string')
 
-    return admissions_df
+        df_filtered['year'] = year_num
+        frames.append(df_filtered)
+        found.add(year_num)
+
+    if requested is not None and requested - found:
+        raise FileNotFoundError(f'Missing downloaded Admissions years: {sorted(requested - found)}')
+    if not frames:
+        raise FileNotFoundError(f'No admissions CSV files found in {admissions_dir}')
+    return pd.concat(frames, ignore_index=True)
 
 
 def clean_enrollment(enrollment_dir: str = 'enrollmentdata', 
@@ -1246,6 +1352,80 @@ def clean_graduation200(graduation_dir: str = 'graduation200data',
     if not frames:
         raise FileNotFoundError(f'No GR200 CSV files found in {graduation_dir}')
     return pd.concat(frames, ignore_index=True)
+
+
+def clean_outcome_measures(outcomes_dir: str = 'outcome_measuresdata',
+                           cohort_type: str = 'all',
+                           pell_group: str = 'total',
+                           year_range: Optional[Union[Tuple[int,int], List[int], int]] = None) -> pd.DataFrame:
+    '''Keep original OM cohort rows and reported 4/6/8-year outcomes.
+
+    2015-16 uses distinct adjusted six/eight-year cohorts and four entry
+    groups. 2017+ has an expanded cohort/Pell structure, a common adjusted
+    cohort, four-year outcomes and award-level outcomes. Totals and Pell
+    subcohorts overlap and must not be summed as independent observations.
+    '''
+    _validate_om_selection(cohort_type, pell_group, year_range)
+    requested = set(get_year_iter('outcome_measures', year_range)) if year_range is not None else None
+    source_fields = set(OM_FIELDS.values())
+    desired = {'unitid', 'omchrt', 'omflag', *source_fields,
+               *('x' + field for field in source_fields)}
+    frames = []
+    found = set()
+
+    for file in sorted(os.listdir(outcomes_dir)):
+        match = re.fullmatch(r'outcome_measures_(\d{4})\.csv', file, flags=re.IGNORECASE)
+        if not match:
+            continue
+        year = int(match.group(1))
+        if requested is not None and year not in requested:
+            continue
+        if not 2015 <= year <= 2024:
+            continue
+        df = pd.read_csv(os.path.join(outcomes_dir, file), dtype=str,
+                         index_col=False, low_memory=False,
+                         usecols=lambda c: c.lower().strip() in desired)
+        df.columns = df.columns.str.lower().str.strip()
+        required = {'unitid', 'omchrt', 'omawdn8',
+                    'omrcht6' if year < 2017 else 'omrchrt'}
+        if not required.issubset(df.columns):
+            raise ValueError(f'{file} is missing OM fields: {sorted(required - set(df.columns))}')
+        df = df.reindex(columns=sorted(desired))
+        codes = df['omchrt'].str.strip()
+        if year < 2017:
+            valid = codes.isin(OM_LEGACY_COHORTS)
+            labels = codes.map(OM_LEGACY_COHORTS)
+            pell_labels = pd.Series('not_collected', index=df.index, dtype='string')
+        else:
+            valid = codes.isin(OM_EXPANDED_COHORTS)
+            labels = codes.map(lambda code: OM_EXPANDED_COHORTS.get(code, (pd.NA, pd.NA))[0])
+            pell_labels = codes.map(lambda code: OM_EXPANDED_COHORTS.get(code, (pd.NA, pd.NA))[1])
+        if cohort_type != 'all':
+            valid &= labels == cohort_type
+        if year >= 2017 and pell_group != 'all':
+            valid &= pell_labels == pell_group
+        selected = df.loc[valid].copy()
+        output = pd.DataFrame({'id': selected['unitid'].str.strip(),
+                               'year': year, 'entering_year_start': year - 8,
+                               'entering_year_end': year - 7,
+                               'source_cohort_code': codes.loc[valid],
+                               'cohort_type': labels.loc[valid],
+                               'pell_group': pell_labels.loc[valid],
+                               'schema_version': 'initial' if year < 2017 else 'expanded',
+                               'inconsistency_flag': selected['omflag'].astype('string').str.strip()})
+        output['inconsistency_flag_label'] = output['inconsistency_flag'].map(
+            {'0': 'No issues', '1': 'Data inconsistencies'}).astype('string')
+        for name, raw in OM_FIELDS.items():
+            output[name] = pd.to_numeric(selected[raw], errors='coerce')
+            output[name + '_status'] = selected['x' + raw].astype('string').str.strip()
+        frames.append(output)
+        found.add(year)
+
+    if requested is not None and requested - found:
+        raise FileNotFoundError(f'Missing downloaded Outcome Measures years: {sorted(requested - found)}')
+    if not frames:
+        raise FileNotFoundError(f'No Outcome Measures CSV files found in {outcomes_dir}')
+    return pd.concat(frames, ignore_index=True)
         
 
 CLEANERS = {
@@ -1262,5 +1442,6 @@ CLEANERS = {
     'completers' : clean_completers,
     'cip' : clean_cip,
     'graduation' : clean_graduation,
-    'graduation200' : clean_graduation200
+    'graduation200' : clean_graduation200,
+    'outcome_measures' : clean_outcome_measures
 }

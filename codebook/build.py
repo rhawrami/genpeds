@@ -18,8 +18,8 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / 'src'))
 
 from genpeds.cleaners import (  # noqa: E402
-    AID_FIELDS, COMPLETERS_FIELDS, DISTANCE_FIELDS, E12_FIELDS,
-    GR200_FIELDS, GR200_FLAG_EXCEPTIONS, TUITION_FIELDS,
+    ADMISSION_CONSIDERATIONS, AID_FIELDS, COMPLETERS_FIELDS, DISTANCE_FIELDS, E12_FIELDS,
+    GR200_FIELDS, GR200_FLAG_EXCEPTIONS, OM_FIELDS, TUITION_FIELDS,
     VARIABLE_RENAME, VETERANS_AID_FIELDS,
 )
 
@@ -32,7 +32,8 @@ PUBLIC = {
     'retention': 'Retention', 'tuition': 'Tuition', 'student_aid': 'StudentAid',
     'veterans_aid': 'VeteransAid', 'completion': 'Completion',
     'completers': 'Completers', 'graduation': 'Graduation',
-    'graduation200': 'Graduation200', 'cip': 'Cip',
+    'graduation200': 'Graduation200', 'outcome_measures': 'OutcomeMeasures',
+    'cip': 'Cip',
 }
 SOURCE_TO_API = {**PUBLIC, 'tuition_program': 'Tuition',
                  'student_aid_net_price': 'StudentAid',
@@ -51,6 +52,7 @@ TABLES = {
     'completers': 'Completions B (all awards) or C (award level)',
     'graduation': 'GR (150% adjusted cohorts)',
     'graduation200': 'GR200_YY (100/150/200% cohorts)',
+    'outcome_measures': 'OM annual cohort/status file',
     'cip': 'Completions A data dictionary CIPCODE frequencies',
 }
 GRAIN = {
@@ -67,6 +69,7 @@ GRAIN = {
     'completers': 'institution × award ending year (B) OR × award_level_code (C)',
     'graduation': 'institution × reporting year × selected deglevel/cohort',
     'graduation200': 'institution × reporting year × bachelor or less-than-four-year entering cohort',
+    'outcome_measures': 'institution × eight-year status year × entry cohort/Pell subgroup',
     'cip': 'CIP code × dictionary year',
 }
 
@@ -92,6 +95,21 @@ def availability(subject, variable):
     if subject == 'admissions':
         if base in ('id', 'year'):
             return f'{start}-{end}'
+        if base.startswith(('another_gender_', 'gender_unknown_')):
+            return '2022-2024; supplemental reporting does not form a disjoint total'
+        if base.startswith('consider_'):
+            if base in ('consider_other_tests', 'consider_other_tests_code'):
+                return '2005-2024; category code semantics vary'
+            if base in ('consider_work_experience', 'consider_work_experience_code',
+                        'consider_essay', 'consider_essay_code',
+                        'consider_legacy', 'consider_legacy_code'):
+                return '2022-2024; required/optional/not considered codes'
+            return '2001-2024; codes change in 2016 and 2022'
+        if base in ('sat_rw_50', 'sat_math_50', 'act_comp_50',
+                    'act_eng_50', 'act_math_50'):
+            return '2022-2024; score medians introduced'
+        if base.startswith('num_submit_'):
+            return '2001-2024; applicability varies by institution'
         if base.startswith(('sat_', 'act_', 'share_submit_')):
             return 'varies by year; score/submitter field not universal'
         return f'{start}-{end}; some totals reconstructed in early years'
@@ -158,6 +176,19 @@ def availability(subject, variable):
         if base == 'collection_phase':
             return '2008 supplemental; 2009-2024 standard'
         return '2008-2024; bachelor/less-than-four-year columns differ'
+    if subject == 'outcome_measures':
+        if base in ('inconsistency_flag', 'inconsistency_flag_label', 'revised_cohort_8'):
+            return '2015 only'
+        if base in ('revised_cohort_6', 'exclusions_6', 'adjusted_cohort_6',
+                    'exclusions_8', 'adjusted_cohort_8'):
+            return '2015-2016; initial scheme (8-year exclusions change description)'
+        if base in ('revised_cohort', 'exclusions', 'adjusted_cohort',
+                    'enrollment_unknown_8_pct') or base.startswith((
+                        'awards_4', 'certificate_', 'associate_', 'bachelor_')):
+            return '2017-2024 expanded scheme'
+        if base in ('pell_group', 'cohort_type', 'source_cohort_code', 'schema_version'):
+            return '2015-2016 initial codes; 2017-2024 expanded cohorts and Pell groups'
+        return '2015-2024; entering cohort is year-8'
     if subject == 'cip':
         return '1984-2025; code definitions/versions vary by year'
     raise KeyError(subject)
@@ -183,6 +214,9 @@ def source_fields(subject, variable):
         raws = GR200_FIELDS[name]
         fields = [(GR200_FLAG_EXCEPTIONS.get(raw, 'x' + raw) if status else raw).upper()
                   for raw in raws]
+    elif subject == 'outcome_measures' and name in OM_FIELDS:
+        fields = [(('X' if status else '') + raw.upper())
+                  for output, raw in OM_FIELDS.items() if output == name]
     elif subject == 'tuition':
         for spec in TUITION_FIELDS.values():
             fields += [v.upper() for raw, (target, flag) in spec.items()
@@ -222,10 +256,15 @@ def source_fields(subject, variable):
             'tot_admitted': ('ADMSSN|ADMSSNM|ADMSSNW', 'reported total or men_admitted + women_admitted if absent'),
             'tot_enrolled': ('ENRLT|ENRLM|ENRLW', 'reported total or men_enrolled + women_enrolled if absent'),
             'men_enrolled': ('ENRLM|ENRLFTM|ENRLPTM', '2001 FT + PT; otherwise source total'),
+            'women_enrolled': ('ENRLW|ENRLFTW|ENRLPTW', '2001 FT + PT; otherwise source total'),
+            'tot_ft_enrolled': ('ENRLFT|ENRLFTM|ENRLFTW', 'reported total; in 2001 sum FT men and women'),
+            'tot_pt_enrolled': ('ENRLPT|ENRLPTM|ENRLPTW', 'reported total; in 2001 sum PT men and women'),
             'accept_rate_men': ('ADMSSNM|APPLCNM', 'men_admitted / men_applied × 100; zero denominator -> NA'),
             'accept_rate_women': ('ADMSSNW|APPLCNW', 'women_admitted / women_applied × 100; zero denominator -> NA'),
+            'accept_rate_total': ('ADMSSN|APPLCN', 'tot_admitted / tot_applied × 100; zero denominator -> NA'),
             'yield_rate_men': ('ENRLM|ENRLFTM|ENRLPTM|ADMSSNM', 'men_enrolled / men_admitted × 100; zero denominator -> NA'),
             'yield_rate_women': ('ENRLW|ENRLFTW|ENRLPTW|ADMSSNW', 'women_enrolled / women_admitted × 100; zero denominator -> NA'),
+            'yield_rate_total': ('ENRLT|ADMSSN', 'tot_enrolled / tot_admitted × 100; zero denominator -> NA'),
             'men_applied_share': ('APPLCNM|APPLCN', 'men_applied / tot_applied × 100'),
             'men_admitted_share': ('ADMSSNM|ADMSSN', 'men_admitted / tot_admitted × 100'),
         },
@@ -269,6 +308,16 @@ def source_fields(subject, variable):
             'cohort_year': ('source file year', 'year - 8 (bachelor) or year - 4 (less-than-four-year)'),
             'collection_phase': ('source file year', '2008 supplemental; 2009+ standard'),
         },
+        'outcome_measures': {
+            'source_cohort_code': ('OMCHRT', 'preserve initial or expanded cohort code'),
+            'cohort_type': ('OMCHRT', 'map entry status/attendance to year-specific cohort'),
+            'pell_group': ('OMCHRT', 'not_collected before 2017; total/Pell/non-Pell from 2017'),
+            'schema_version': ('source file year', '2015-16 initial; 2017+ expanded'),
+            'inconsistency_flag': ('OMFLAG', '2015 raw flag: 0 no issues or 1 data inconsistencies'),
+            'inconsistency_flag_label': ('OMFLAG', '2015 code-to-label mapping'),
+            'entering_year_start': ('source file year', 'year - 8'),
+            'entering_year_end': ('source file year', 'year - 7'),
+        },
     }
     if name in calculations.get(subject, {}):
         raw, method = calculations[subject][name]
@@ -279,6 +328,10 @@ def source_fields(subject, variable):
                           [race + 'men', race + 'women', 'totmen', 'totwomen'])
             fields = [raw.upper() for raw, output in VARIABLE_RENAME[subject].items()
                       if output in components]
+    if subject == 'admissions' and name in ADMISSION_CONSIDERATIONS:
+        raw = [source.upper() for source, output in VARIABLE_RENAME['admissions'].items()
+               if output == ADMISSION_CONSIDERATIONS[name]]
+        fields, method = raw, 'year-aware label for raw ADMCON code; see codes.csv'
     if subject == 'graduation':
         suffix = name.removesuffix('_graduated').removeprefix('gradrate_')
         if name.endswith('_graduated') or name.startswith('gradrate_'):
@@ -314,7 +367,8 @@ def source_fields(subject, variable):
 def units(subject, variable):
     if variable.endswith('_status'):
         return 'NCES status code'
-    if variable in ('year', 'period_start_year', 'aid_year_start', 'cohort_year'):
+    if variable in ('year', 'period_start_year', 'aid_year_start', 'cohort_year',
+                    'entering_year_start', 'entering_year_end'):
         return 'year'
     if variable == 'id':
         return 'UNITID string'
@@ -343,7 +397,7 @@ def units(subject, variable):
         return 'people'
     if subject in ('completion',) and (variable.endswith(('men', 'women')) or variable == 'totmen'):
         return 'awards by CIP (not unique people)'
-    if subject in ('enrollment', 'distance_enrollment', 'twelve_month_enrollment', 'retention', 'completers', 'graduation', 'graduation200') and (
+    if subject in ('enrollment', 'distance_enrollment', 'twelve_month_enrollment', 'retention', 'completers', 'graduation', 'graduation200', 'outcome_measures') and (
         variable.endswith(('men', 'women', '_graduated')) or variable in ('total_students', 'total_completers')
         or variable.startswith(('age_', 'ft_', 'pt_', 'completed_', 'adjusted_cohort_',
                                  'additional_exclusions_', 'exclusions_')) or variable in (
@@ -351,10 +405,15 @@ def units(subject, variable):
             'nonresident', 'race_unknown', 'pacific_islander', 'asian_pacific',
             'revised_cohort', 'still_enrolled', 'exclusive_distance', 'some_distance',
             'no_distance', 'exclusive_same_state', 'exclusive_other_us_state',
-            'exclusive_us_state_unknown', 'exclusive_outside_us', 'exclusive_location_unknown')):
+            'exclusive_us_state_unknown', 'exclusive_outside_us', 'exclusive_location_unknown')
+        or (subject == 'outcome_measures' and variable in OM_FIELDS
+            and not variable.endswith('_pct'))):
         return 'people'
     if subject == 'admissions' and variable.startswith(('tot_', 'men_')):
         return 'applicants/admittees/enrollees'
+    if subject == 'admissions' and variable.startswith((
+        'women_', 'another_gender_', 'gender_unknown_', 'num_submit_')):
+        return 'applicants/admittees/enrollees or score submitters'
     return 'category, text, or source-specific measure'
 
 

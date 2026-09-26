@@ -13,6 +13,7 @@ For the complete output-variable inventory, source mappings, and year-specific i
 ## Recent Updates
 Characteristics, 12-month enrollment, Completion and Completers include the released 2025 files; most other classes currently end in 2024.
 Tuition, StudentAid, and VeteransAid now provide institutional price and aid data.
+Admissions now retains applicant/admit/enrollment breakdowns and year-specific admissions policies; OutcomeMeasures adds 4/6/8-year student-success outcomes.
 
 ## Usage
 
@@ -64,6 +65,8 @@ The key methods we'll be using 99% of the time are:
 - `.scrape()`, which downloads subject data
 - `.clean()`, which cleans subject data
 - `.run()`, which downloads and cleans subject data (along with some further options)
+
+Downloads use HTTPS with explicit timeouts, reject unexpected HTTP responses, and write only a validated data member from an NCES ZIP to the subject cache. A failed download raises an error instead of being silently skipped. `rm_disk=True` is opt-in and removes the selected download directory after cleaning; keep unrelated files out of those cache directories.
 
 ```python
 from genpeds import Graduation
@@ -134,6 +137,10 @@ admdat = Admissions(year_range=(2001,2023))
 adm_df = admdat.run(merge_with_char=True,
                     rm_disk=True)
 ```
+
+`Admissions` now keeps women applicants/admittees/enrollees, full-time and part-time enrollment counts, and the source's published totals; in 2001 the absent totals and sex-specific enrolled counts are derived from the available men/women FT/PT fields. It also returns SAT/ACT **submitter counts** (`num_submit_sat`, `num_submit_act`) next to the existing submission percentages. `accept_rate_total` and `yield_rate_total` use the published totals where present; zero denominators give missing rates.
+
+`consider_*_code` exposes raw `ADMCON` admission-policy codes, with year-aware `consider_*` labels for GPA, rank, record, preparation, recommendations, testing, and other available criteria. **The codes change meaning**: older `2` means recommended, a `5` consideration category appears from 2016, and 2022+ `5`/`3` on `consider_test_scores` mean test optional/test blind. Other-test consideration starts in 2005; work experience, essay and legacy status start in 2022. Test-score medians and reported another-gender/unknown-gender admissions counts also start in 2022; these supplements are not simply added to men/women counts. SAT/ACT percentages describe first-time degree/certificate-seeking *score submitters*, not a share of everyone admitted. See [codebook/changes.csv](codebook/changes.csv) for the documented boundaries.
 - **Enrollment** (e.g., enrollment by race/gender/level, etc.) (available 1984-2024)
 ```python
 from genpeds import scrape_ipeds_data, Enrollment
@@ -302,6 +309,19 @@ bachelor_df = rates.run(cohort_type='bachelor')
 ```
 
 `cohort_type` is `'bachelor'`, `'less_than_four_year'`, or `'both'` (default). The latter includes **degree and certificate** seekers at less-than-four-year institutions; it is not an associate-only group. For `year=2024`, `cohort_year` is 2016 for bachelor's entrants and 2020 for less-than-four-year entrants. `adjusted_cohort_150` and `adjusted_cohort_200` may differ because additional exclusions are allowed; `completed_150_to_200` is an incremental count, whereas `completed_200` is cumulative. `rate_100`, `rate_150`, and `rate_200` are NCES's published percentages, not rates recalculated or clamped by the package. `still_enrolled` starts in 2011, and `collection_phase='supplemental'` identifies the initial 2008 wave. Counts and rates have `_status` flags. GR200 follows older entering cohorts than `Graduation` for the same reporting year, so it remains a separate class. Downloads are cached in `graduation200data/`.
+
+- **OutcomeMeasures** (awards at 4/6/8 years and enrollment outcomes at 8 years; 2015–2024)
+```python
+from genpeds import OutcomeMeasures
+
+outcomes = OutcomeMeasures((2017, 2024))
+pell_transfers = outcomes.run(cohort_type='non_first_time_full_time',
+                             pell_group='pell', merge_with_char=True)
+initial = OutcomeMeasures((2015, 2016)).run(
+    cohort_type='first_time_full_time')
+```
+
+`cohort_type` accepts `'all'` (default), `'total'` (2017+), or the first-/non-first-time × full-/part-time groups. `pell_group` is `'total'` (default), `'pell'`, `'non_pell'`, or `'all'`; Pell breakdowns exist only from **2017**. `'all'` includes overlapping overall and Pell subcohorts: **never sum them as independent people**. `year=2024` follows July 2016–June 2017 entering students to August 2024. `awards_4/6/8` and `awards_*_pct` retain NCES's counts and published rates for awards at the reporting institution; `certificate_*`, `associate_*`, and `bachelor_*` distinguish highest award at each checkpoint from 2017. Eight-year `still_enrolled_here_8`, `subsequently_enrolled_elsewhere_8`, `enrollment_unknown_8`, and `no_award_8` describe further outcomes, **not earnings or awards earned elsewhere**. The 2015–16 `schema_version='initial'` has separate six- and eight-year adjusted cohorts and no four-year/Pell/award-level breakdown; 2015 also has an `inconsistency_flag`. Counts and percentages preserve NCES `_status` flags. Source ZIPs are cached in `outcome_measuresdata/`. See the [harmonization guide](codebook/harmonization.md#outcome-measures) for cross-year interpretation.
 
 These classes support institution-level trends across admissions, enrollment, persistence, completions, prices, and aid. Further IPEDS subjects and additional fields within existing subjects can be added over time.
 

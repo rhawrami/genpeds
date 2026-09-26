@@ -54,6 +54,17 @@ TwelveMonthEnrollment,LSTUDY,2002-2019,999,total,Institution-wide generated tota
 TwelveMonthEnrollment,EFFYALEV,2020-2025,1,total,Institution-wide total,EFFY2025,Overlaps level rows
 TwelveMonthEnrollment,EFFYALEV,2020-2025,2,undergrad,All undergraduates total,EFFY2025,Do not sum nested undergraduate detail codes
 TwelveMonthEnrollment,EFFYALEV,2020-2025,12,grad,All graduates total,EFFY2025,
+Admissions,ADMCON1-8,2001-2015,1,Required,Required for admissions consideration,ADM2014,Other year-specific special codes remain in consider_*_code
+Admissions,ADMCON1-8,2001-2015,2,Recommended,Recommended for admissions consideration,ADM2014,
+Admissions,ADMCON1-8,2001-2015,3,Neither required nor recommended,Neither required nor recommended,ADM2014,Not the 2022+ test-blind definition
+Admissions,ADMCON1-8,2001-2015,4,Do not know,Survey response unknown,ADM2015,Not every item offers code 4 in every year
+Admissions,ADMCON9,2005-2015,1-4,Same policy meanings as ADMCON1-8,Other test consideration,ADM2014,Not collected before 2005
+Admissions,ADMCON1-9,2016-2021,5,Considered but not required,Considered but not required,ADM2016,Introduced before the 2022 redesign
+Admissions,ADMCON1-12,2022-2024,1,Required to be considered,Required to be considered for admission,ADM2024,Legacy status ADMCON12 cannot be required
+Admissions,ADMCON1-12,2022-2024,5,Considered if submitted,Not required but considered if submitted,ADM2024,ADMCON7 reads test optional in API
+Admissions,ADMCON1-12,2022-2024,3,Not considered even if submitted,Not considered for admission,ADM2024,ADMCON7 reads test blind in API
+Admissions,ADMCON7,2022-2024,5,Test optional (considered if submitted),Test optional,ADM2024,Source code 5 has year/item-dependent wording
+Admissions,ADMCON7,2022-2024,3,Test blind (not considered),Test blind,ADM2024,Not the pre-2022 code 3 meaning
 DistanceEnrollment,EFDELEV,2012-2024,1,total,All fall students enrolled for credit,EF2012A_DIST,Overlaps level 2 and 12
 DistanceEnrollment,EFDELEV,2012-2024,2,undergrad,All undergraduates,EF2012A_DIST,Overlaps subgroups 3 and 11
 DistanceEnrollment,EFDELEV,2012-2024,3,degree_seeking,Degree/certificate-seeking undergraduates,EF2012A_DIST,Subset of level 2
@@ -78,3 +89,24 @@ Retention,XRET_PCF|XRET_PCP,2003-2024,A,A,Not applicable,EF2003D,Not the same as
 Retention,XRET_PCF|XRET_PCP,2003-2024,B,B,Left blank,EF2003D,Not the same as a structural absence
 Graduation200,BAREVCT,2008-2024,<populated>,bachelor,Applicable bachelor's entering cohort,GR200_24,cohort_year=year-8
 Graduation200,L4REVCT,2008-2024,<populated>,less_than_four_year,Applicable less-than-four-year degree/certificate entering cohort,GR200_24,cohort_year=year-4
+OutcomeMeasures,OMCHRT,2015-2016,1,first_time_full_time|not_collected,Full-time first-time entrants,OM2015,No separate Pell status
+OutcomeMeasures,OMCHRT,2015-2016,2,first_time_part_time|not_collected,Part-time first-time entrants,OM2015,No separate Pell status
+OutcomeMeasures,OMCHRT,2015-2016,3,non_first_time_full_time|not_collected,Full-time non-first-time entrants,OM2015,No separate Pell status
+OutcomeMeasures,OMCHRT,2015-2016,4,non_first_time_part_time|not_collected,Part-time non-first-time entrants,OM2015,No separate Pell status
+OutcomeMeasures,OMCHRT,2017-2024,10,first_time_full_time|total,FT first-time cohort total,OM2017,Overlaps Pell and non-Pell
+OutcomeMeasures,OMCHRT,2017-2024,11,first_time_full_time|pell,FT first-time Pell recipients,OM2017,Subset of 10 and 51
+OutcomeMeasures,OMCHRT,2017-2024,12,first_time_full_time|non_pell,FT first-time non-Pell students,OM2017,Subset of 10 and 52
+OutcomeMeasures,OMCHRT,2017-2024,20,first_time_part_time|total,PT first-time cohort total,OM2017,Overlaps Pell and non-Pell
+OutcomeMeasures,OMCHRT,2017-2024,21,first_time_part_time|pell,PT first-time Pell recipients,OM2017,Subset of 20 and 51
+OutcomeMeasures,OMCHRT,2017-2024,22,first_time_part_time|non_pell,PT first-time non-Pell students,OM2017,Subset of 20 and 52
+OutcomeMeasures,OMCHRT,2017-2024,30,non_first_time_full_time|total,FT non-first-time cohort total,OM2017,Overlaps Pell and non-Pell
+OutcomeMeasures,OMCHRT,2017-2024,31,non_first_time_full_time|pell,FT non-first-time Pell recipients,OM2017,Subset of 30 and 51
+OutcomeMeasures,OMCHRT,2017-2024,32,non_first_time_full_time|non_pell,FT non-first-time non-Pell students,OM2017,Subset of 30 and 52
+OutcomeMeasures,OMCHRT,2017-2024,40,non_first_time_part_time|total,PT non-first-time cohort total,OM2017,Overlaps Pell and non-Pell
+OutcomeMeasures,OMCHRT,2017-2024,41,non_first_time_part_time|pell,PT non-first-time Pell recipients,OM2017,Subset of 40 and 51
+OutcomeMeasures,OMCHRT,2017-2024,42,non_first_time_part_time|non_pell,PT non-first-time non-Pell students,OM2017,Subset of 40 and 52
+OutcomeMeasures,OMCHRT,2017-2024,50,total|total,Overall entering cohort,OM2017,Overlaps 10/20/30/40 and 51/52
+OutcomeMeasures,OMCHRT,2017-2024,51,total|pell,Overall Pell group,OM2017,Overlaps all cohort-specific Pell groups
+OutcomeMeasures,OMCHRT,2017-2024,52,total|non_pell,Overall non-Pell group,OM2017,Overlaps all cohort-specific non-Pell groups
+OutcomeMeasures,OMFLAG,2015,0,No issues,NCES reports no OM2015 data inconsistency,OM2015,Not present in later OM files
+OutcomeMeasures,OMFLAG,2015,1,Data inconsistencies,NCES flags an OM2015 data inconsistency,OM2015,Preserve source row and flag rather than discarding

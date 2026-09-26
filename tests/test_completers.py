@@ -91,9 +91,16 @@ def test_completer_download_urls_and_cache(tmp_path, monkeypatch, year, subject,
 
     class Response:
         content = archive.getvalue()
-        text = ''
+        status_code = 200
+        headers = {}
 
-    def fake_get(url):
+        def iter_content(self, chunk_size):
+            yield self.content
+
+        def close(self):
+            pass
+
+    def fake_get(url, **kwargs):
         urls.append(url)
         return Response()
 
