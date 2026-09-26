@@ -9,6 +9,7 @@ import pandas as pd
 from genpeds.downloader import scrape_ipeds_data, get_year_iter
 from genpeds.cleaners import CLEANERS, _validate_om_selection
 from genpeds.human_resources import HR_DATASETS, HR_VARIABLES, dataset_vars
+from genpeds.finance import FINANCE_FORMS, FINANCE_VARIABLES, clean_finance, form_vars
 
 
 def _remove_download_dir(directory: str) -> None:
@@ -603,6 +604,59 @@ class VeteransAid(IPDS):
         '''Download and clean military-benefit data, with optional IC merge.'''
         self.scrape(see_progress=see_progress)
         df = self.clean(rm_disk=rm_disk)
+        if merge_with_char:
+            char_df = Characteristics(year_range=self.year_range).run(
+                see_progress=see_progress, rm_disk=rm_disk)
+            df = _merge_characteristics(df, char_df)
+        return df
+
+
+class Finance(IPDS):
+    '''Institutional fiscal-year Finance statements by accounting form.'''
+    subject = 'finance'
+
+    def __init__(self,
+                 year_range: Optional[Union[Tuple[int, int], List[int], int]] = None):
+        '''F1A/F2/F3 fiscal years ending 2004-2024; inclusive tuple, list, or year.'''
+        get_year_iter(self.subject, year_range)
+        super().__init__(year_range)
+        self.variable_dict = FINANCE_VARIABLES
+
+    def get_form_vars(self, form: str = 'f1a') -> Dict[str, str]:
+        '''Variables applicable to one accounting form (not all years).'''
+        return form_vars(form)
+
+    def scrape(self, form: str = 'all', see_progress: bool = False) -> None:
+        '''Download the selected form or all three Finance source families.'''
+        if form != 'all' and form not in FINANCE_FORMS:
+            raise ValueError(f'form must be one of {sorted(FINANCE_FORMS)} or all')
+        forms = FINANCE_FORMS if form == 'all' else {form: FINANCE_FORMS[form]}
+        for subject in forms.values():
+            scrape_ipeds_data(subject, self.year_range, see_progress=see_progress)
+
+    def clean(self,
+              form: str = 'all',
+              finance_dir: Optional[str] = None,
+              rm_disk: bool = False) -> pd.DataFrame:
+        '''Clean locally cached Finance files; preserve source accounting forms.'''
+        if form != 'all' and form not in FINANCE_FORMS:
+            raise ValueError(f'form must be one of {sorted(FINANCE_FORMS)} or all')
+        df = clean_finance(form=form, year_range=self.year_range,
+                           finance_dir=finance_dir)
+        if rm_disk:
+            forms = FINANCE_FORMS if form == 'all' else {form: FINANCE_FORMS[form]}
+            for subject in forms.values():
+                _remove_download_dir(finance_dir or f'{subject}data')
+        return df
+
+    def run(self,
+            form: str = 'all',
+            see_progress: bool = False,
+            merge_with_char: bool = False,
+            rm_disk: bool = False) -> pd.DataFrame:
+        '''Download and clean fiscal-year Finance, optionally joining IC by year.'''
+        self.scrape(form=form, see_progress=see_progress)
+        df = self.clean(form=form, rm_disk=rm_disk)
         if merge_with_char:
             char_df = Characteristics(year_range=self.year_range).run(
                 see_progress=see_progress, rm_disk=rm_disk)

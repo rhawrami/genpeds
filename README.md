@@ -16,6 +16,7 @@ Tuition, StudentAid, and VeteransAid now provide institutional price and aid dat
 Admissions now retains applicant/admit/enrollment breakdowns and year-specific admissions policies; OutcomeMeasures adds 4/6/8-year student-success outcomes.
 InstructionalActivity now complements 12-month enrollment headcounts with hours and FTE through 2025.
 HumanResources now covers modern staffing, faculty, new-hire and salary tables through 2024.
+Finance now covers public GASB and nonprofit/for-profit FASB fiscal-year statements, 2004–2024.
 
 ## Usage
 
@@ -109,7 +110,7 @@ IPEDS [covers](https://nces.ed.gov/ipeds/about-ipeds) eight main subjects:
 7. Student Financial Aid
 8. Institutional Resources including Human Resources, Finance, and Academic Libraries
 
-`genpeds` supports selected data from the first seven subject areas and Human Resources within institutional resources. Finance and Academic Libraries remain to be added:
+`genpeds` supports selected data from the first seven subject areas and Human Resources and Finance within institutional resources. Academic Libraries remain to be added:
 
 - **Characteristics** (directory, geography and institutional classification; available 1984–2025)
 ```python
@@ -263,6 +264,21 @@ benefits_df = VeteransAid((2014, 2024)).run(merge_with_char=True)
 ```
 
 This separate class keeps institutions with **graduate-only** GI Bill or DoD Tuition Assistance recipients that are absent from the main SFA file. It provides recipient counts, total dollars, averages and `_status` flags by undergraduate/graduate level and benefit program. Award amounts represent benefits known to the institution, not every benefit a student may have received. Data are cached in `veterans_aiddata/`. For both aid classes, merging Characteristics uses the aid period's ending year as `year`; institutional characteristics are a snapshot from that year rather than the same aid-period measure.
+- **Finance** (institutional fiscal years ending 2004–2024)
+```python
+from genpeds import Finance
+
+finance = Finance([2004, 2014, 2020, 2024])
+public = finance.run(form='f1a', merge_with_char=True)  # GASB public
+nonprofit = finance.run(form='f2')  # FASB nonprofits and some publics
+forprofit = finance.run(form='f3')  # FASB for-profits
+# Or: all_forms = Finance(2024).run(form='all')
+finance.get_form_vars('f3')  # applicable fields; some begin only in 2014/2020
+```
+
+`year=2024` is **fiscal 2024** (`F2324_F1A/F2/F3`), not the 2024–25 price year. `form='all'` (default) downloads three separate source families and retains a `form`/`accounting_basis` on each row; don't pool form totals as interchangeable accounting measures. `accounting_regime` marks prealigned 2004–09, aligned 2010+, and the F3 redesign from **fiscal 2014** (the 2014–15 collection). `net_tuition_fees` is after discounts, **not** published tuition or a student's net price. GASB `revenues_and_additions` and FASB `revenues_and_investment_return` stay in different columns; `net_position`, `net_assets`, and `equity` likewise remain separate. F3 `total_expenses` (financial statement) and `functional_expenses` (functional table, since 2014) are **distinct** and can differ; the former is not applicable for many F3 reporters. F3 `instruction_expenses` starts in 2014, while `pell_discounts` begins in 2020 for all forms. Earlier fields remain missing, not zero. Each amount has its own NCES `_status` flag. The **2024 Spring Finance release was provisional** when checked; see [Finance harmonization](codebook/harmonization.md#finance) for scope, accounting changes and source dictionaries.
+
+`scrape_ipeds_data('finance', 2024)` downloads **F1A only**; use `Finance(2024).scrape(form='all')` for all three. Cached CSVs live in `financedata/`, `finance_f2data/`, and `finance_f3data/` respectively. `Finance.clean(form='f2', finance_dir='my_cache')` reads a single form offline; `run(..., rm_disk=True)` removes the selected source caches. A Characteristics merge uses the **fiscal-ending year** as its join key, not an identical survey period.
 - **HumanResources** (modern IPEDS staffing and salary files, 2012–2024)
 ```python
 from genpeds import HumanResources
@@ -368,7 +384,7 @@ initial = OutcomeMeasures((2015, 2016)).run(
 
 `cohort_type` accepts `'all'` (default), `'total'` (2017+), or the first-/non-first-time × full-/part-time groups. `pell_group` is `'total'` (default), `'pell'`, `'non_pell'`, or `'all'`; Pell breakdowns exist only from **2017**. `'all'` includes overlapping overall and Pell subcohorts: **never sum them as independent people**. `year=2024` follows July 2016–June 2017 entering students to August 2024. `awards_4/6/8` and `awards_*_pct` retain NCES's counts and published rates for awards at the reporting institution; `certificate_*`, `associate_*`, and `bachelor_*` distinguish highest award at each checkpoint from 2017. Eight-year `still_enrolled_here_8`, `subsequently_enrolled_elsewhere_8`, `enrollment_unknown_8`, and `no_award_8` describe further outcomes, **not earnings or awards earned elsewhere**. The 2015–16 `schema_version='initial'` has separate six- and eight-year adjusted cohorts and no four-year/Pell/award-level breakdown; 2015 also has an `inconsistency_flag`. Counts and percentages preserve NCES `_status` flags. Source ZIPs are cached in `outcome_measuresdata/`. See the [harmonization guide](codebook/harmonization.md#outcome-measures) for cross-year interpretation.
 
-These classes support institution-level trends across admissions, enrollment, persistence, completions, prices, and aid. Further IPEDS subjects and additional fields within existing subjects can be added over time.
+These classes support institution-level trends across admissions, enrollment, persistence, completions, prices, aid, staffing, and institutional finance. Further IPEDS subjects and additional fields within existing subjects can be added over time.
 
 ## Development Installation
 

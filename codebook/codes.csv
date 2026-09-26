@@ -129,3 +129,6 @@ HumanResources,ARANK,2012-2024,7,All instructional staff total,All ranks in SAL*
 HumanResources,SNHCAT,2012-2024,10000,All full-time new hires,Overlapping new-hire total,S2024_NH,Reporting window changes from 2018
 HumanResources,SANIN##|SANIT##,2012-2024,01,Full-time non-instructional staff,Overlapping full-time noninstructional total,SAL2024_NIS,No source sex breakdown
 HumanResources,SANIN##|SANIT##,2012-2024,05,Management,Management occupation group,SAL2024_NIS,Noninstructional salary outlays are not individual salaries
+Finance,source file form,2004-2024,F1A,f1a,Public institutions reporting under GASB,F2324_F1A,Some public institutions instead use FASB F2
+Finance,source file form,2004-2024,F2,f2,Private nonprofit and some public institutions reporting under FASB,F2324_F2,Not synonymous with Characteristics CONTROL=2
+Finance,source file form,2004-2024,F3,f3,Private for-profit institutions reporting under FASB,F2324_F3,Statement and functional expense totals can differ

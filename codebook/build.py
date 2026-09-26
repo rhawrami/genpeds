@@ -26,10 +26,12 @@ from genpeds.cleaners import (  # noqa: E402
 from genpeds.human_resources import (  # noqa: E402
     HR_DATASETS, HR_FIELDS, HR_VARIABLES, HR_CATEGORY_FIELDS,
 )
+from genpeds.finance import FINANCE_FIELDS, FINANCE_VARIABLES  # noqa: E402
 
 
 CONFIG = json.loads((ROOT / 'src/genpeds/cfg.json').read_text(encoding='utf-8'))
 CONFIG['human_resources']['variables'] = HR_VARIABLES
+CONFIG['finance']['variables'] = FINANCE_VARIABLES
 PUBLIC = {
     'characteristics': 'Characteristics', 'admissions': 'Admissions',
     'enrollment': 'Enrollment', 'distance_enrollment': 'DistanceEnrollment',
@@ -39,13 +41,14 @@ PUBLIC = {
     'veterans_aid': 'VeteransAid', 'completion': 'Completion',
     'completers': 'Completers', 'graduation': 'Graduation',
     'graduation200': 'Graduation200', 'outcome_measures': 'OutcomeMeasures',
-    'human_resources': 'HumanResources',
+    'human_resources': 'HumanResources', 'finance': 'Finance',
     'cip': 'Cip',
 }
 SOURCE_TO_API = {**PUBLIC, 'tuition_program': 'Tuition',
                  'student_aid_net_price': 'StudentAid',
                  'completers_by_award': 'Completers'}
 SOURCE_TO_API.update({subject: 'HumanResources' for subject in HR_DATASETS.values()})
+SOURCE_TO_API.update({'finance_f2': 'Finance', 'finance_f3': 'Finance'})
 TABLES = {
     'characteristics': 'IC/FA/HD institutional header',
     'admissions': 'IC2001-2013 or ADM2014-2024',
@@ -63,6 +66,7 @@ TABLES = {
     'graduation200': 'GR200_YY (100/150/200% cohorts)',
     'outcome_measures': 'OM annual cohort/status file',
     'human_resources': 'EAP; S*_OC/IS/SIS/NH; SAL*_IS/NIS (selected dataset)',
+    'finance': 'F*_F1A (GASB), F*_F2/F3 (FASB); selected form',
     'cip': 'Completions A data dictionary CIPCODE frequencies',
 }
 GRAIN = {
@@ -82,6 +86,7 @@ GRAIN = {
     'graduation200': 'institution × reporting year × bachelor or less-than-four-year entering cohort',
     'outcome_measures': 'institution × eight-year status year × entry cohort/Pell subgroup',
     'human_resources': 'dataset-dependent: institution × year × occupation/staff/tenure/rank code',
+    'finance': 'institution × fiscal year × accounting form',
     'cip': 'CIP code × dictionary year',
 }
 
@@ -229,6 +234,23 @@ def availability(subject, variable):
         if families:
             return f"2012-2024; source dataset(s): {'/'.join(families)}"
         return '2012-2024 modern HR; category population/coverage depends on dataset'
+    if subject == 'finance':
+        if base == 'pell_discounts':
+            return '2020-2024; all three forms; missing before the field was added'
+        if base == 'functional_expenses':
+            return '2014-2024; F3 only; not interchangeable with F3B02'
+        if base == 'instruction_expenses':
+            return '2004-2024 F1A/F2; 2014-2024 F3 (different regimes)'
+        if base in ('net_position', 'revenues_and_additions',
+                    'operating_revenues', 'nonoperating_revenues'):
+            return '2004-2024; public GASB F1A only'
+        if base == 'net_assets':
+            return '2004-2024; nonprofit/some public FASB F2 only'
+        if base == 'equity':
+            return '2004-2024; for-profit FASB F3 only'
+        if base == 'revenues_and_investment_return':
+            return '2004-2024; FASB F2/F3 only'
+        return '2004-2024; form-specific source, applicability, and accounting regime'
     if subject == 'cip':
         return '1984-2025; code definitions/versions vary by year'
     raise KeyError(subject)
@@ -260,6 +282,10 @@ def source_fields(subject, variable):
     elif subject == 'human_resources':
         fields = [((('X' if status else '') + raw.upper()))
                   for group in HR_FIELDS.values()
+                  for raw, output in group.items() if output == name]
+    elif subject == 'finance':
+        fields = [(('X' if status else '') + raw.upper())
+                  for group in FINANCE_FIELDS.values()
                   for raw, output in group.items() if output == name]
     elif subject == 'instructional_activity':
         fields = [(('X' if status else '') + raw.upper())
@@ -392,6 +418,12 @@ def source_fields(subject, variable):
             'salary_outlay': ('SANIT01-14', 'noninstructional annual outlay for selected occupation'),
             'salary_outlay_status': ('XSANIT01-14', 'NCES noninstructional outlay flags'),
         },
+        'finance': {
+            'form': ('source F*_F1A/F2/F3 stem', 'source accounting form, not a CONTROL lookup'),
+            'accounting_basis': ('source form', 'F1A GASB; F2 nonprofit/some public FASB; F3 for-profit FASB'),
+            'accounting_regime': ('source form|fiscal year', '2004-09 prealigned; 2010+ aligned; F3 revised from FY2014'),
+            'source_stem': ('configured source file', 'exact NCES ZIP filename stem'),
+        },
     }
     if name in calculations.get(subject, {}):
         raw, method = calculations[subject][name]
@@ -458,8 +490,10 @@ def units(subject, variable):
         if variable in ('women_share',):
             return 'percent (0-100)'
         if any(variable == output for fields in HR_FIELDS.values()
-               for output in fields.values()) or variable == 'staff_count':
+                for output in fields.values()) or variable == 'staff_count':
             return 'people'
+    if subject == 'finance' and variable in FINANCE_MEASURE_NAMES:
+        return 'nominal institutional dollars (form/era-specific)'
     if subject == 'instructional_activity':
         if variable.endswith('_hours'):
             return 'instructional credit/contact/clock hours (not unique students)'
@@ -510,6 +544,10 @@ def units(subject, variable):
     return 'category, text, or source-specific measure'
 
 
+FINANCE_MEASURE_NAMES = {name for fields in FINANCE_FIELDS.values()
+                         for name in fields.values()}
+
+
 VAR_HEADERS = ('api_class', 'subject', 'variable', 'description', 'subject_years',
                'field_availability', 'row_grain', 'unit', 'source_tables',
                'source_fields', 'harmonization', 'status_of')
@@ -547,7 +585,9 @@ def file_rows():
             yield dict(api_class=SOURCE_TO_API[subject], download_subject=subject,
                        configured_year=year, source_stem=stem, data_zip_url=data,
                        dictionary_zip_url=dictionary, reference_period=period,
-                       evidence='configured endpoint in src/genpeds/cfg.json; URL not independently rechecked by this CSV')
+                        evidence=('data ZIP HTTP HEAD 200 on 2026-09-26; dictionaries checked for sampled years'
+                                  if subject.startswith('finance') else
+                                  'configured endpoint in src/genpeds/cfg.json; URL not independently rechecked by this CSV'))
 
 
 def render(headers, rows):

@@ -3,13 +3,8 @@ __pycache__/
 .pytest_cache/
 venv/
 .DS_Store
-enrollmentdata/
-completiondata/
-graduationdata/
-retentiondata/
-characteristicsdata/
-cipdata/
-admissionsdata/
+# Downloaded IPEDS subject caches (including Finance form directories)
+*data/
 notebooks/
 .env
 TODO.txt
