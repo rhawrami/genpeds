@@ -2,13 +2,14 @@
 
 __version__ = '1.2.3'
 
-from genpeds.core import Characteristics, Admissions, Enrollment, TwelveMonthEnrollment, Retention, Tuition, StudentAid, VeteransAid, Completion, Completers, Cip, Graduation
+from genpeds.core import Characteristics, Admissions, Enrollment, DistanceEnrollment, TwelveMonthEnrollment, Retention, Tuition, StudentAid, VeteransAid, Completion, Completers, Cip, Graduation, Graduation200
 from genpeds.downloader import scrape_ipeds_data
 
 __all__ = [
     'Characteristics',
     'Admissions',
     'Enrollment', 
+    'DistanceEnrollment',
     'TwelveMonthEnrollment',
     'Retention',
     'Tuition',
@@ -18,5 +19,6 @@ __all__ = [
     'Completers',
     'Cip',
     'Graduation',
+    'Graduation200',
     'scrape_ipeds_data'
 ]

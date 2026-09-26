@@ -13,7 +13,7 @@ This is the **version-controlled, stand-alone** reference for the output of `gen
 
 Search `variables.csv` by `api_class` + `variable`, e.g. `Completion` + `major_type`. The `subject_years` column gives the **API's overall supported interval**; it is **not proof that every field exists or every institution reports it throughout that interval**. Read `field_availability` and the matching sections of `harmonization.md`/`changes.csv`. `_status` fields hold source NCES reporting/imputation codes; see [missingness and flags](harmonization.md#missing-data-and-source-flags).
 
-`source_files.csv` reflects **configured filenames and the download URL rule**, not 375 independently re-fetched or validated URLs. Use its `dictionary_zip_url` to check a claim against the official dictionary for a particular year (HTML in some older years, Excel in later years). NCES can revise releases; a raw `_rv.csv` in a data ZIP may supersede an earlier CSV. Configured file-year is not necessarily an aid, fiscal, cohort, or academic year; the [period key](harmonization.md#year-and-join-semantics) gives the differences.
+`source_files.csv` reflects **configured filenames and the download URL rule**, not an independently re-fetched or validated URL manifest. Use its `dictionary_zip_url` to check a claim against the official dictionary for a particular year (HTML in some older years, Excel in later years). NCES can revise releases; a raw `_rv.csv` in a data ZIP may supersede an earlier CSV. Configured file-year is not necessarily an aid, fiscal, cohort, or academic year; the [period key](harmonization.md#year-and-join-semantics) gives the differences.
 
 To regenerate the two inventories in a development environment with package dependencies installed:
 

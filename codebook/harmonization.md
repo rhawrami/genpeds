@@ -10,13 +10,14 @@ The class constructor accepts a single year, inclusive `(start, end)` tuple, or 
 
 | Output | Meaning of `year` | Example |
 | --- | --- | --- |
-| `Characteristics`, `Admissions`, `Enrollment` | Header / admissions / fall snapshot year | `Characteristics(2025)` describes the 2025–26 IC collection; fall `Enrollment` currently ends in 2024. |
+| `Characteristics`, `Admissions`, `Enrollment`, `DistanceEnrollment` | Header / admissions / fall snapshot year | `Characteristics(2025)` describes the 2025–26 IC collection; both fall-enrollment APIs currently end in 2024. |
 | `TwelveMonthEnrollment` | End of July–June enrollment period | `year=2025`, `period_start_year=2024`: July 2024–June 2025. |
 | `Retention` | Follow-up fall; **not** the entering cohort year | `year=2024`, `cohort_year=2023`. |
 | `Tuition` | **Start** of published academic/program price year | `year=2024` prices for 2024–25. |
 | `StudentAid`, `VeteransAid` | **End** of aid/benefit year | `year=2024`, `aid_year_start=2023`: aid during 2023–24; `SFA2324`. |
 | `Completion`, `Completers` | **End** of July–June award period | `C2025_A/B/C` covers July 2024–June 2025; no six-year cohort is implied. |
 | `Graduation` | Graduation-rate reporting/status year for an **older entering cohort** | Associate/bachelor 150%-of-normal-time cohorts started about three/six years earlier. |
+| `Graduation200` | GR200 status year for a **different older cohort** | `year=2024`: bachelor's `cohort_year=2016`; less-than-four-year `cohort_year=2020`. |
 | `Cip` | Year of the Completions **data dictionary** | Describes that year's code; it does not date an entering cohort. |
 
 **A shared `year` does not guarantee the same time window**: `Tuition(2024)` covers 2024–25 prices while `StudentAid(2024)` covers 2023–24 aid. A 2025 Characteristics merge onto `TwelveMonthEnrollment(2025)` attaches a later fall institutional snapshot to the preceding July–June period. Align the period explicitly before comparing or joining prices, aid, enrollment, and awards.
@@ -30,6 +31,7 @@ The directory of [configured sources](source_files.csv) preserves the exact ZIP 
 | `Characteristics` | 1984–2025 | Institution-year; **1986 exception** below | Year-dependent IC/FA/HD headers. |
 | `Admissions` | 2001–2024 | Institution-year; first-time applicant/admit/enroll measures | IC through 2013, ADM from 2014. |
 | `Enrollment` | 1984–2024 | Institution-fall year × `studentlevel` (`undergrad` or `grad`) | EF-A fall level/attendance lines. |
+| `DistanceEnrollment` | 2012–2024 | Institution-fall year × EFDELEV level; `'all'` includes overlapping UG and institution totals | EF-A_DIST distance supplement. |
 | `TwelveMonthEnrollment` | Periods ending 2002–2025 | Institution-period × `student_level` (`undergrad`, `grad`, `total`, early `first_professional`); `'all'` includes overlapping total | EFFY. |
 | `Retention` | Follow-up falls 2003–2024 | Institution-follow-up fall; FT/PT rates and later cohort counts as separate columns | EF-D. |
 | `Tuition` | Price years starting 2000–2024 | Institution-price year × `reporter` (`academic`, `program`) | IC `_AY/_PY` through 2023; COST1 in 2024. |
@@ -38,6 +40,7 @@ The directory of [configured sources](source_files.csv) preserves the exact ZIP 
 | `Completion` | Award years ending 1984–2025 | Institution-year × CIP × selected `deglevel`/`major_type`; **awards by field**, not unique people | C-A (older differently named extracts). |
 | `Completers` | Award years ending 2012–2025 | B: institution-year distinct people across all awards; C: institution-year-award level distinct people with age | C-B or C-C (modern files only). |
 | `Graduation` | 2000–2024 | Institution-status year × selected associate/bachelor cohort | GR, selected 150% rows. |
+| `Graduation200` | 2008–2024 | Institution-status year × applicable bachelor or less-than-four-year cohort | GR200_YY (initial 2008 supplemental wave). |
 | `Cip` | 1984–2025 | CIP code × year description | Completions data dictionary. |
 
 `Characteristics(1986)` includes **different institutions with the same placeholder `UNITID=247719`**. It returns the source rows, but subject classes reject `merge_with_char=True` when the selected header has duplicate `(id, year)` keys; otherwise a join could multiply observations. No artificial ID crosswalk is constructed. A UNITID may also change over decades as institutions split or combine.
@@ -59,6 +62,12 @@ Year-dependent IC/ADM raw columns are renamed and converted to numeric; in **200
 ### Fall Enrollment
 
 `Enrollment` selects specific EF-A `LINE` rows for the requested level, then sums FT/PT counts by institution and calculates sex/race shares. UG uses lines **1/15 in 1984–85** and **8/22 from 1986**. Graduate lines are year-dependent: **1984–85** `11,25,10,24`; **1986 and 1990–98** `14,28,9,10,23,24`; **1987–89** `14,28`; **1999** `32,52,16`; **2000–08** `11,25,9,23`; **2009–24** `11,25`. Some older graduate rules include separately counted first-professional students. This is a fall snapshot, not an unduplicated annual count. Older `EFRACE##` fields and newer `EFTOTL*` / named race fields are selected according to which occur in a file. Only White, Black, Hispanic, Asian and men/women totals are exposed; other NCES race categories are not included in this API. Shares use the sum of **men + women** as denominator; do not interpret these as every category in expanded gender reporting. See the historical [EF1984](https://nces.ed.gov/ipeds/datacenter/data/EF1984_Dict.zip) and modern [EF2024A](https://nces.ed.gov/ipeds/complete-data-files/EF2024A_Dict.zip) dictionaries.
+
+### DistanceEnrollment
+
+Separate `EF2012A_DIST`–`EF2024A_DIST` files count **fall students enrolled for credit**, by whether they take exclusively distance education courses (`EFDEEXC`), some but not exclusively distance courses (`EFDESOM`), or none (`EFDENON`). An IPEDS distance education *course* delivers its instructional content exclusively at a distance: on-campus orientation, testing or academic support visits do not by themselves change that classification. These are counts of **students, not courses**. The cleaner keeps NCES values, computes category / `EFDETOT` × 100 shares (zero denominator → missing), and preserves matching `X...` reporting flags. [EF2012A_DIST](https://nces.ed.gov/ipeds/datacenter/data/EF2012A_DIST_Dict.zip), [EF2024A_DIST](https://nces.ed.gov/ipeds/complete-data-files/EF2024A_DIST_Dict.zip).
+
+`EFDELEV=1` is **all students**, `2` all undergraduates, `3` degree/certificate-seeking undergraduates, `11` non-degree undergraduates, `12` graduate students. `student_level='all'` returns all these **overlapping rows**: do not sum level 1 with levels 2/12 or level 2 with its subgroups 3/11. The five `EFDEEX1`–`EFDEEX5` geography fields subdivide **exclusively** distance students only (same state; another U.S. state; U.S. state unknown; outside the U.S.; location unknown). They are not geographic breakdowns of the some-distance group. This source has a different grain from `Enrollment` (which first aggregates FT/PT by level) and `TwelveMonthEnrollment` (a July–June unduplicated count), so the package keeps a separate class.
 
 ### TwelveMonthEnrollment
 
@@ -94,11 +103,17 @@ Average `ftft_net_price` measures **cost of attendance after qualifying grants f
 
 `Graduation` selects bachelor's `SECTION=2`, `GRTYPE=8` adjusted cohort and `9` graduated; or associate's `SECTION=4`, `GRTYPE=29/30`, restricting `CHRTSTAT` to `12–13`. It pivots source counts by institution and calculates sex/race **graduation percentages at 150% of normal time** as graduates ÷ adjusted cohort × 100. A bachelor cohort is tracked about six years and an associate cohort about three; the row's `year` is **not** the year of admission or a simple count of all annual degrees. It is not the GR200 200% rate nor OM 4/6/8-year outcomes. Earlier and later race columns use different raw names (`GRRACE##` versus named `GRTOTL*` and race columns). [GR2024 dictionary](https://nces.ed.gov/ipeds/complete-data-files/GR2024_Dict.zip).
 
-The current `Graduation()` constructor defaults to `(1984, 2024)` even though the configured GR endpoints start at **2000**. Pass `Graduation((2000, 2024))` (or an explicit subset) until that default is corrected; a 1980s GR filename is not evidence of a survey release.
+`Graduation()` defaults to the configured **2000–2024** series. Earlier GR files exist upstream but are not harmonized by this API; a 1980s GR filename is not evidence of a survey release.
+
+### Graduation200
+
+`GR200_08`–`GR200_24` are **not** a longer follow-up of the same `(id, year)` row as `Graduation(year)`. GR200 reports a **bachelor's** entering cohort (e.g. 2016 entrants at 2024 status) or a **less-than-four-year degree/certificate** cohort (2020 entrants at 2024 status); the latter is *not* an associate-only group. NCES first introduced GR200 in a **2008 supplemental** collection; `collection_phase` marks 2008 separately from 2009 onward. This source does not provide the sex/race disaggregation of GR. [GR200_08 dictionary](https://nces.ed.gov/ipeds/datacenter/data/GR200_08_Dict.zip), [GR200_24 dictionary](https://nces.ed.gov/ipeds/complete-data-files/GR200_24_Dict.zip).
+
+For bachelor (`BA*`) or less-than-four-year (`L4*`) records the cleaner exposes the revised entering cohort, permitted exclusions, adjusted cohort and **NCES-published** cumulative completions/rates by **100%**, **150%**, and **200%** of normal time. `additional_exclusions_200` can make `adjusted_cohort_200` **different** from the 150% denominator. `completed_150_to_200` is incremental, whereas `completed_200` is cumulative. `still_enrolled` appears in the file **from 2011** and is missing earlier, not zero. Source flags for `BANC200A/L4NC200A` are unusually spelled `XBANC20A/XL4NC20A` and retained. The API does **not** clamp rates to 0–100 or recompute them; for example the revised 2014 source has a reported `BAGR100=196` at UNITID `482468` with status `R`, which merits scrutiny in analysis rather than silent alteration.
 
 ## Missing data and source flags
 
-- NCES source ZIPs often have `X...` companion columns with status codes such as **R** reported, **Z** implied zero, **A** not applicable and **B** blank. Other values identify particular corrections/imputation procedures; their exact definitions belong to the **year-specific dictionary**, not a single global code table. The newer `Retention`, `Tuition`, `StudentAid`, `VeteransAid`, `TwelveMonthEnrollment` and `Completers` APIs retain selected flags in `*_status` columns. Older `Admissions`, `Enrollment`, `Completion` and `Graduation` cleaners generally **do not** expose source flags.
+- NCES source ZIPs often have `X...` companion columns with status codes such as **R** reported, **Z** implied zero, **A** not applicable and **B** blank. Other values identify particular corrections/imputation procedures; their exact definitions belong to the **year-specific dictionary**, not a single global code table. The newer `DistanceEnrollment`, `Graduation200`, `Retention`, `Tuition`, `StudentAid`, `VeteransAid`, `TwelveMonthEnrollment` and `Completers` APIs retain selected flags in `*_status` columns. Older `Admissions`, `Enrollment`, `Completion` and `Graduation` cleaners generally **do not** expose source flags.
 - A column introduced in a later year is returned as missing (`NaN` for numeric, `<NA>` for a status), **not zero**, in the earlier years of APIs with fixed output schemas. A present source field can also be NA because it is not applicable, the institution did not report, or it was suppressed. The older aggregate cleaners may use pandas group sums that produce zero where all selected input values were missing; **do not assume their zeros always mean a measured zero**.
 - The downloader extracts one CSV from each ZIP, preferring a lexically later `_rv` revised file where present. Recent files can be provisional and subsequently revised. It does not attach a release-version column. The research [data release schedule](https://nces.ed.gov/ipeds/survey-components/data-release-schedule) distinguishes provisional and final releases. Record ZIP names and download dates in reproducible downstream analyses.
 

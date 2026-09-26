@@ -18,7 +18,8 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / 'src'))
 
 from genpeds.cleaners import (  # noqa: E402
-    AID_FIELDS, COMPLETERS_FIELDS, E12_FIELDS, TUITION_FIELDS,
+    AID_FIELDS, COMPLETERS_FIELDS, DISTANCE_FIELDS, E12_FIELDS,
+    GR200_FIELDS, GR200_FLAG_EXCEPTIONS, TUITION_FIELDS,
     VARIABLE_RENAME, VETERANS_AID_FIELDS,
 )
 
@@ -26,10 +27,12 @@ from genpeds.cleaners import (  # noqa: E402
 CONFIG = json.loads((ROOT / 'src/genpeds/cfg.json').read_text(encoding='utf-8'))
 PUBLIC = {
     'characteristics': 'Characteristics', 'admissions': 'Admissions',
-    'enrollment': 'Enrollment', 'twelve_month_enrollment': 'TwelveMonthEnrollment',
+    'enrollment': 'Enrollment', 'distance_enrollment': 'DistanceEnrollment',
+    'twelve_month_enrollment': 'TwelveMonthEnrollment',
     'retention': 'Retention', 'tuition': 'Tuition', 'student_aid': 'StudentAid',
     'veterans_aid': 'VeteransAid', 'completion': 'Completion',
-    'completers': 'Completers', 'graduation': 'Graduation', 'cip': 'Cip',
+    'completers': 'Completers', 'graduation': 'Graduation',
+    'graduation200': 'Graduation200', 'cip': 'Cip',
 }
 SOURCE_TO_API = {**PUBLIC, 'tuition_program': 'Tuition',
                  'student_aid_net_price': 'StudentAid',
@@ -38,6 +41,7 @@ TABLES = {
     'characteristics': 'IC/FA/HD institutional header',
     'admissions': 'IC2001-2013 or ADM2014-2024',
     'enrollment': 'EF fall-enrollment A',
+    'distance_enrollment': 'EF fall-enrollment A distance supplement',
     'twelve_month_enrollment': 'EFFY (12-month headcounts)',
     'retention': 'EF fall-enrollment D',
     'tuition': 'IC academic-year/program-year; COST1_2024',
@@ -46,12 +50,14 @@ TABLES = {
     'completion': 'Completions A (awards by CIP)',
     'completers': 'Completions B (all awards) or C (award level)',
     'graduation': 'GR (150% adjusted cohorts)',
+    'graduation200': 'GR200_YY (100/150/200% cohorts)',
     'cip': 'Completions A data dictionary CIPCODE frequencies',
 }
 GRAIN = {
     'characteristics': 'institution × year (1986 placeholder UNITID is nonunique)',
     'admissions': 'institution × year',
     'enrollment': 'institution × fall year × studentlevel',
+    'distance_enrollment': 'institution × fall year × EFDELEV student_level (nested rows overlap)',
     'twelve_month_enrollment': 'institution × period-ending year × student_level',
     'retention': 'institution × retention fall year',
     'tuition': 'institution × price starting year × reporter',
@@ -60,6 +66,7 @@ GRAIN = {
     'completion': 'institution × award ending year × CIP × selected deglevel/major',
     'completers': 'institution × award ending year (B) OR × award_level_code (C)',
     'graduation': 'institution × reporting year × selected deglevel/cohort',
+    'graduation200': 'institution × reporting year × bachelor or less-than-four-year entering cohort',
     'cip': 'CIP code × dictionary year',
 }
 
@@ -92,6 +99,8 @@ def availability(subject, variable):
         if base.startswith(('wt', 'bk', 'hsp', 'asn', 'totwt', 'totbk', 'tothsp', 'totasn')):
             return 'varies by year; race categories and raw columns change'
         return f'{start}-{end}; selected LINE codes change by year'
+    if subject == 'distance_enrollment':
+        return '2012-2024; source EFDELEV totals and UG subsets overlap'
     if subject == 'twelve_month_enrollment':
         if base == 'asian_pacific':
             return '2002-2007 only'
@@ -143,6 +152,12 @@ def availability(subject, variable):
                             'gradrate_hsp', 'gradrate_asn')):
             return 'year-specific race fields; verify before comparing'
         return '2000-2024; selected cohorts and source codes vary'
+    if subject == 'graduation200':
+        if base == 'still_enrolled':
+            return '2011-2024; missing in 2008-2010'
+        if base == 'collection_phase':
+            return '2008 supplemental; 2009-2024 standard'
+        return '2008-2024; bachelor/less-than-four-year columns differ'
     if subject == 'cip':
         return '1984-2025; code definitions/versions vary by year'
     raise KeyError(subject)
@@ -161,6 +176,13 @@ def source_fields(subject, variable):
         raw_old, flag_old, raw_new, flag_new = E12_FIELDS[name]
         fields = [v.upper() for v in ((flag_old, flag_new) if status else
                                      (raw_old, raw_new)) if v]
+    elif subject == 'distance_enrollment':
+        fields = [(('X' if status else '') + raw.upper())
+                  for raw, output in DISTANCE_FIELDS.items() if output == name]
+    elif subject == 'graduation200' and name in GR200_FIELDS:
+        raws = GR200_FIELDS[name]
+        fields = [(GR200_FLAG_EXCEPTIONS.get(raw, 'x' + raw) if status else raw).upper()
+                  for raw in raws]
     elif subject == 'tuition':
         for spec in TUITION_FIELDS.values():
             fields += [v.upper() for raw, (target, flag) in spec.items()
@@ -235,6 +257,18 @@ def source_fields(subject, variable):
             'cip': ('CIPCODE CodeValue|HTML dictionary', 'year-specific dictionary code'),
             'cip_description': ('CIPCODE ValueLabel|HTML dictionary', 'dictionary label, title-cased and prefix trimmed'),
         },
+        'distance_enrollment': {
+            'student_level': ('EFDELEV', 'select total/UG/graduate or nested UG subgroup row'),
+            'source_level_code': ('EFDELEV', 'trim and preserve original level code'),
+            'exclusive_share': ('EFDEEXC|EFDETOT', 'exclusive_distance / total_students × 100; zero denominator -> NA'),
+            'some_share': ('EFDESOM|EFDETOT', 'some_distance / total_students × 100; zero denominator -> NA'),
+            'no_distance_share': ('EFDENON|EFDETOT', 'no_distance / total_students × 100; zero denominator -> NA'),
+        },
+        'graduation200': {
+            'cohort_type': ('BAREVCT|L4REVCT', 'select the applicable source cohort'),
+            'cohort_year': ('source file year', 'year - 8 (bachelor) or year - 4 (less-than-four-year)'),
+            'collection_phase': ('source file year', '2008 supplemental; 2009+ standard'),
+        },
     }
     if name in calculations.get(subject, {}):
         raw, method = calculations[subject][name]
@@ -267,7 +301,7 @@ def source_fields(subject, variable):
         fields, method = ['UNITID'], 'source identifier, trimmed'
     elif name == 'year':
         fields, method = ['source file year'], 'file/period year; see guide for period alignment'
-    elif name in ('period_start_year', 'aid_year_start', 'cohort_year'):
+    elif name in ('period_start_year', 'aid_year_start', 'cohort_year') and subject != 'graduation200':
         fields, method = ['year'], 'year - 1'
     if status:
         method = 'NCES raw reporting/imputation flag; see year-specific dictionary'
@@ -294,7 +328,7 @@ def units(subject, variable):
         return 'nullable boolean'
     if variable.startswith(('sat_', 'act_')) and variable.endswith(('_25', '_50', '_75')):
         return 'test-score points'
-    if variable.startswith('gradrate_') or variable.endswith(('_share', '_rate', '_pct')) or variable.startswith('share_submit_'):
+    if variable.startswith(('gradrate_', 'rate_')) or variable.endswith(('_share', '_rate', '_pct')) or variable.startswith('share_submit_'):
         return 'percent (0-100)'
     if variable.startswith(('accept_rate_', 'yield_rate_')):
         return 'percent (0-100)'
@@ -309,11 +343,15 @@ def units(subject, variable):
         return 'people'
     if subject in ('completion',) and (variable.endswith(('men', 'women')) or variable == 'totmen'):
         return 'awards by CIP (not unique people)'
-    if subject in ('enrollment', 'twelve_month_enrollment', 'retention', 'completers', 'graduation') and (
+    if subject in ('enrollment', 'distance_enrollment', 'twelve_month_enrollment', 'retention', 'completers', 'graduation', 'graduation200') and (
         variable.endswith(('men', 'women', '_graduated')) or variable in ('total_students', 'total_completers')
-        or variable.startswith(('age_', 'ft_', 'pt_')) or variable in (
+        or variable.startswith(('age_', 'ft_', 'pt_', 'completed_', 'adjusted_cohort_',
+                                 'additional_exclusions_', 'exclusions_')) or variable in (
             'white', 'black', 'asian', 'american_indian', 'hispanic', 'two_or_more',
-            'nonresident', 'race_unknown', 'pacific_islander', 'asian_pacific')):
+            'nonresident', 'race_unknown', 'pacific_islander', 'asian_pacific',
+            'revised_cohort', 'still_enrolled', 'exclusive_distance', 'some_distance',
+            'no_distance', 'exclusive_same_state', 'exclusive_other_us_state',
+            'exclusive_us_state_unknown', 'exclusive_outside_us', 'exclusive_location_unknown')):
         return 'people'
     if subject == 'admissions' and variable.startswith(('tot_', 'men_')):
         return 'applicants/admittees/enrollees'

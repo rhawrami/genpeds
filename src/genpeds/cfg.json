@@ -204,6 +204,46 @@
             "totasn_share" : "Non-Hispanic Asian share of total enrollment; 'total' here is defined as the sum of male and female enrollment; this includes both part-time and full-time enrollment."
         }
     },
+    "distance_enrollment": {
+        "description": "Fall students taking exclusively distance education courses, some distance education courses, or none, plus location of exclusively distance students; EF*_A_DIST files for fall 2012-2024.",
+        "years_available": [2012, 2024],
+        "endpoints": {
+            "2012": "EF2012A_DIST", "2013": "EF2013A_DIST",
+            "2014": "EF2014A_DIST", "2015": "EF2015A_DIST",
+            "2016": "EF2016A_DIST", "2017": "EF2017A_DIST",
+            "2018": "EF2018A_DIST", "2019": "EF2019A_DIST",
+            "2020": "EF2020A_DIST", "2021": "EF2021A_DIST",
+            "2022": "EF2022A_DIST", "2023": "EF2023A_DIST",
+            "2024": "EF2024A_DIST"
+        },
+        "variables": {
+            "id": "Institutional UNITID identifier.",
+            "year": "Fall enrollment reporting year; students enrolled for credit at the official fall date or October 15.",
+            "student_level": "EFDELEV category: total, undergrad, grad, degree_seeking UG, or non_degree UG; 'all' includes overlapping levels and total.",
+            "source_level_code": "Original EFDELEV code; 1 all students, 2 UG, 3 UG degree/certificate-seeking, 11 UG non-degree, 12 graduate.",
+            "total_students": "All students enrolled for credit in this source level (EFDETOT).",
+            "exclusive_distance": "Students taking exclusively distance education courses (EFDEEXC).",
+            "some_distance": "Students taking at least one but not exclusively distance education courses (EFDESOM).",
+            "no_distance": "Students taking no distance education courses (EFDENON).",
+            "exclusive_same_state": "Exclusively distance students located in institution's state/jurisdiction (EFDEEX1).",
+            "exclusive_other_us_state": "Exclusively distance students located in another known U.S. state/jurisdiction (EFDEEX2).",
+            "exclusive_us_state_unknown": "Exclusively distance students located in the U.S. but state/jurisdiction unknown (EFDEEX3).",
+            "exclusive_outside_us": "Exclusively distance students located outside the U.S. (EFDEEX4).",
+            "exclusive_location_unknown": "Exclusively distance students with location unknown/not reported (EFDEEX5).",
+            "exclusive_share": "exclusive_distance / total_students times 100; zero/missing denominator produces missing.",
+            "some_share": "some_distance / total_students times 100; zero/missing denominator produces missing.",
+            "no_distance_share": "no_distance / total_students times 100; zero/missing denominator produces missing.",
+            "total_students_status": "NCES source reporting/imputation code for total_students (XEFDETOT).",
+            "exclusive_distance_status": "NCES source reporting/imputation code for exclusive_distance (XEFDEEXC).",
+            "some_distance_status": "NCES source reporting/imputation code for some_distance (XEFDESOM).",
+            "no_distance_status": "NCES source reporting/imputation code for no_distance (XEFDENON).",
+            "exclusive_same_state_status": "NCES source reporting/imputation code for exclusive_same_state (XEFDEEX1).",
+            "exclusive_other_us_state_status": "NCES source reporting/imputation code for exclusive_other_us_state (XEFDEEX2).",
+            "exclusive_us_state_unknown_status": "NCES source reporting/imputation code for exclusive_us_state_unknown (XEFDEEX3).",
+            "exclusive_outside_us_status": "NCES source reporting/imputation code for exclusive_outside_us (XEFDEEX4).",
+            "exclusive_location_unknown_status": "NCES source reporting/imputation code for exclusive_location_unknown (XEFDEEX5)."
+        }
+    },
     "twelve_month_enrollment": {
         "description": "Unduplicated student headcounts for July 1 through June 30 by undergraduate, graduate, and (through 2010) first-professional level; EFFY files for reporting periods ending 2002-2025. This is not the Fall Enrollment snapshot.",
         "years_available": [2002, 2025],
@@ -700,6 +740,51 @@
             "gradrate_hspwomen" : "Graduation rate for Hispanic women (within 150 percent of normal time taken to graduate).", 
             "gradrate_asnmen" : "Graduation rate for  non-Hispanic Asianmen (within 150 percent of normal time taken to graduate).", 
             "gradrate_asnwomen" : "Graduation rate for non-Hispanic Asian women (within 150 percent of normal time taken to graduate)."
+        }
+    },
+    "graduation200": {
+        "description": "GR200 outcomes at 100%, 150% and 200% of normal time for bachelor's or less-than-four-year degree/certificate cohorts; reporting years 2008-2024. The 2008 wave is supplemental.",
+        "years_available": [2008, 2024],
+        "endpoints": {
+            "2008": "GR200_08", "2009": "GR200_09", "2010": "GR200_10",
+            "2011": "GR200_11", "2012": "GR200_12", "2013": "GR200_13",
+            "2014": "GR200_14", "2015": "GR200_15", "2016": "GR200_16",
+            "2017": "GR200_17", "2018": "GR200_18", "2019": "GR200_19",
+            "2020": "GR200_20", "2021": "GR200_21", "2022": "GR200_22",
+            "2023": "GR200_23", "2024": "GR200_24"
+        },
+        "variables": {
+            "id": "Institutional UNITID identifier.",
+            "year": "GR200 reporting/status year, not entering-cohort year.",
+            "cohort_type": "'bachelor' or 'less_than_four_year'; less-than-four-year includes degree and certificate seekers, not only associate's students.",
+            "cohort_year": "Entering cohort year: year minus 8 for bachelor, year minus 4 for less-than-four-year.",
+            "collection_phase": "'supplemental' for the first 2008 GR200 wave, otherwise 'standard'.",
+            "revised_cohort": "Revised original entering cohort (BAREVCT or L4REVCT).",
+            "exclusions_150": "Permitted exclusions by 150% of normal time (BAEXCLU or L4EXCLU).",
+            "adjusted_cohort_150": "Adjusted cohort for 100% and 150% measures (BAAC150 or L4AC150).",
+            "completed_100": "Number completing by 100% of normal time (BANC100 or L4NC100).",
+            "rate_100": "NCES-published completion percentage by 100% of normal time (BAGR100 or L4GR100); not recalculated by genpeds.",
+            "completed_150": "Number completing by 150% of normal time (BANC150 or L4NC150).",
+            "rate_150": "NCES-published completion percentage by 150% of normal time (BAGR150 or L4GR150); not the same entering cohort as Graduation(year).",
+            "additional_exclusions_200": "Additional exclusions after 150% before 200% (BAAEXCL or L4AEXCL).",
+            "adjusted_cohort_200": "Adjusted cohort for 200% of normal time after additional exclusions (BAAC200 or L4AC200).",
+            "completed_150_to_200": "New completions between 150% and 200% of normal time (BANC200A or L4NC200A); not the cumulative 200% count.",
+            "still_enrolled": "Students still enrolled at 200% status (BASTEND or L4STEND), available from 2011; missing before introduction.",
+            "completed_200": "Cumulative completions by 200% of normal time (BANC200 or L4NC200).",
+            "rate_200": "NCES-published 200% completion percentage (BAGR200 or L4GR200); 200% adjusted cohort may differ from the 150% denominator.",
+            "revised_cohort_status": "NCES reporting/imputation flag for revised_cohort.",
+            "exclusions_150_status": "NCES reporting/imputation flag for exclusions_150.",
+            "adjusted_cohort_150_status": "NCES reporting/imputation flag for adjusted_cohort_150.",
+            "completed_100_status": "NCES reporting/imputation flag for completed_100.",
+            "rate_100_status": "NCES reporting/imputation flag for rate_100.",
+            "completed_150_status": "NCES reporting/imputation flag for completed_150.",
+            "rate_150_status": "NCES reporting/imputation flag for rate_150.",
+            "additional_exclusions_200_status": "NCES reporting/imputation flag for additional_exclusions_200.",
+            "adjusted_cohort_200_status": "NCES reporting/imputation flag for adjusted_cohort_200.",
+            "completed_150_to_200_status": "NCES reporting/imputation flag for completed_150_to_200; source X flag omits one character from raw measure name.",
+            "still_enrolled_status": "NCES reporting/imputation flag for still_enrolled; missing before 2011.",
+            "completed_200_status": "NCES reporting/imputation flag for completed_200.",
+            "rate_200_status": "NCES reporting/imputation flag for rate_200."
         }
     },
     "cip": {

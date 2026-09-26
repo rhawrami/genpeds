@@ -317,6 +317,43 @@ class Enrollment(IPDS):
         return df
 
 
+class DistanceEnrollment(IPDS):
+    '''Fall students enrolled in distance education courses.'''
+    subject = 'distance_enrollment'
+
+    def __init__(self,
+                 year_range: Optional[Union[Tuple[int,int], List[int], int]] = None):
+        '''EF-A distance tables, fall years 2012-2024.'''
+        get_year_iter(self.subject, year_range)
+        super().__init__(year_range)
+
+    def clean(self,
+              student_level: str = 'undergrad',
+              distance_dir: str = 'distance_enrollmentdata',
+              rm_disk: bool = False) -> pd.DataFrame:
+        '''Clean cached EF-A distance records for a selected row category.'''
+        df = CLEANERS[self.subject](distance_dir=distance_dir,
+                                    student_level=student_level,
+                                    year_range=self.year_range)
+        if rm_disk:
+            shutil.rmtree(distance_dir)
+        return df
+
+    def run(self,
+            student_level: str = 'undergrad',
+            see_progress: bool = False,
+            merge_with_char: bool = False,
+            rm_disk: bool = False) -> pd.DataFrame:
+        '''Download and clean fall distance data; optionally join IC.'''
+        self.scrape(see_progress=see_progress)
+        df = self.clean(student_level=student_level, rm_disk=rm_disk)
+        if merge_with_char:
+            char_df = Characteristics(year_range=self.year_range).run(
+                see_progress=see_progress, rm_disk=rm_disk)
+            df = _merge_characteristics(df, char_df)
+        return df
+
+
 class TwelveMonthEnrollment(IPDS):
     '''Unduplicated 12-month IPEDS enrollment headcounts.'''
     subject = 'twelve_month_enrollment'
@@ -736,7 +773,7 @@ class Graduation(IPDS):
     subject = 'graduation'
 
     def __init__(self, 
-                 year_range: Optional[Union[Tuple[int,int], List[int], int]] = (1984,2024)):
+                 year_range: Optional[Union[Tuple[int,int], List[int], int]] = (2000,2024)):
         '''
         IPEDS Graduation data.
         
@@ -748,9 +785,9 @@ class Graduation(IPDS):
         -----------------  
         <h3>Example Use:</h3>
         >>> import genpeds as ed
-        >>> grad_aughts = ed.Completion(year_range=(2000,2009)) # ten years of data
+        >>> grad_aughts = ed.Graduation(year_range=(2000,2009)) # ten years of data
         >>> grad_aughts.get_available_years()
-         (2000,2024) # available years for Enrollment data
+         (2000,2024) # available years for Graduation data
         >>> grad_data = grad_aughts.run() # returns Pandas dataframe
 
         ----------------
@@ -816,5 +853,44 @@ class Graduation(IPDS):
         df = self.clean(rm_disk=rm_disk, degree_level=degree_level)
         if merge_with_char:
             char_df = Characteristics(year_range=self.year_range).run(see_progress=see_progress, rm_disk=rm_disk)
+            df = _merge_characteristics(df, char_df)
+        return df
+
+
+class Graduation200(IPDS):
+    '''GR200 cohort outcomes through 200% of normal completion time.'''
+    subject = 'graduation200'
+
+    def __init__(self,
+                 year_range: Optional[Union[Tuple[int,int], List[int], int]] = None):
+        '''GR200 status/reporting years 2008-2024; 2008 is a supplemental wave.'''
+        get_year_iter(self.subject, year_range)
+        super().__init__(year_range)
+
+    def clean(self,
+              cohort_type: str = 'both',
+              graduation_dir: str = 'graduation200data',
+              rm_disk: bool = False) -> pd.DataFrame:
+        '''Clean selected bachelor's/less-than-four-year source cohorts.'''
+        df = CLEANERS[self.subject](graduation_dir=graduation_dir,
+                                    cohort_type=cohort_type,
+                                    year_range=self.year_range)
+        if rm_disk:
+            shutil.rmtree(graduation_dir)
+        return df
+
+    def run(self,
+            cohort_type: str = 'both',
+            see_progress: bool = False,
+            merge_with_char: bool = False,
+            rm_disk: bool = False) -> pd.DataFrame:
+        '''Download and clean GR200; optionally join Characteristics.'''
+        if cohort_type not in ('both', 'bachelor', 'less_than_four_year'):
+            raise ValueError("cohort_type must be 'both', 'bachelor', or 'less_than_four_year'")
+        self.scrape(see_progress=see_progress)
+        df = self.clean(cohort_type=cohort_type, rm_disk=rm_disk)
+        if merge_with_char:
+            char_df = Characteristics(year_range=self.year_range).run(
+                see_progress=see_progress, rm_disk=rm_disk)
             df = _merge_characteristics(df, char_df)
         return df

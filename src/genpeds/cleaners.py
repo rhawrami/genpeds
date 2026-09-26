@@ -174,6 +174,34 @@ E12_FIELDS = {
 }
 
 
+DISTANCE_FIELDS = {
+    'efdetot': 'total_students', 'efdeexc': 'exclusive_distance',
+    'efdesom': 'some_distance', 'efdenon': 'no_distance',
+    'efdeex1': 'exclusive_same_state', 'efdeex2': 'exclusive_other_us_state',
+    'efdeex3': 'exclusive_us_state_unknown',
+    'efdeex4': 'exclusive_outside_us',
+    'efdeex5': 'exclusive_location_unknown'
+}
+
+
+GR200_FIELDS = {
+    'revised_cohort': ('barevct', 'l4revct'),
+    'exclusions_150': ('baexclu', 'l4exclu'),
+    'adjusted_cohort_150': ('baac150', 'l4ac150'),
+    'completed_100': ('banc100', 'l4nc100'),
+    'rate_100': ('bagr100', 'l4gr100'),
+    'completed_150': ('banc150', 'l4nc150'),
+    'rate_150': ('bagr150', 'l4gr150'),
+    'additional_exclusions_200': ('baaexcl', 'l4aexcl'),
+    'adjusted_cohort_200': ('baac200', 'l4ac200'),
+    'completed_150_to_200': ('banc200a', 'l4nc200a'),
+    'still_enrolled': ('bastend', 'l4stend'),
+    'completed_200': ('banc200', 'l4nc200'),
+    'rate_200': ('bagr200', 'l4gr200')
+}
+GR200_FLAG_EXCEPTIONS = {'banc200a': 'xbanc20a', 'l4nc200a': 'xl4nc20a'}
+
+
 COMPLETERS_FIELDS = {
     'total_completers': 'cstotlt', 'men': 'cstotlm', 'women': 'cstotlw',
     'american_indian': 'csaiant', 'asian': 'csasiat', 'black': 'csbkaat',
@@ -446,6 +474,67 @@ def clean_enrollment(enrollment_dir: str = 'enrollmentdata',
     master_df = pd.concat(df_list, ignore_index=True)
 
     return master_df
+
+
+def clean_distance_enrollment(distance_dir: str = 'distance_enrollmentdata',
+                              student_level: str = 'undergrad',
+                              year_range: Optional[Union[Tuple[int,int], List[int], int]] = None) -> pd.DataFrame:
+    '''Select EF-A distance rows without adding overlapping level subtotals.
+
+    EFDELEV=1 is the all-student total; 2 and 12 identify UG and graduate;
+    3 and 11 are degree-seeking/non-degree UG subsets of level 2.
+    Geography counts describe exclusively distance students only.
+    '''
+    levels = {'1': 'total', '2': 'undergrad', '3': 'degree_seeking',
+              '11': 'non_degree', '12': 'grad'}
+    if student_level not in (*levels.values(), 'all'):
+        raise ValueError(f'student_level must be one of {sorted([*levels.values(), "all"])}')
+    requested = set(get_year_iter('distance_enrollment', year_range)) if year_range is not None else None
+    input_cols = {'unitid', 'efdelev', *DISTANCE_FIELDS,
+                  *('x' + raw for raw in DISTANCE_FIELDS)}
+    frames = []
+    found = set()
+
+    for file in sorted(os.listdir(distance_dir)):
+        match = re.fullmatch(r'distance_enrollment_(\d{4})\.csv', file, flags=re.IGNORECASE)
+        if not match:
+            continue
+        year = int(match.group(1))
+        if requested is not None and year not in requested:
+            continue
+        if not 2012 <= year <= 2024:
+            continue
+        df = pd.read_csv(os.path.join(distance_dir, file), dtype=str,
+                         index_col=False, low_memory=False,
+                         usecols=lambda c: c.lower().strip() in input_cols)
+        df.columns = df.columns.str.lower().str.strip()
+        required = {'unitid', 'efdelev', 'efdetot', 'efdeexc', 'efdesom', 'efdenon'}
+        if not required.issubset(df.columns):
+            raise ValueError(f'{file} is missing distance fields: {sorted(required - set(df.columns))}')
+        df = df.reindex(columns=sorted(input_cols))
+        df['efdelev'] = df['efdelev'].str.strip()
+        selected = (df['efdelev'].isin(levels) if student_level == 'all' else
+                    df['efdelev'] == next(k for k, v in levels.items() if v == student_level))
+        df = df.loc[selected].copy()
+        output = pd.DataFrame({'id': df['unitid'].str.strip(), 'year': year,
+                               'student_level': df['efdelev'].map(levels),
+                               'source_level_code': df['efdelev']})
+        for raw, name in DISTANCE_FIELDS.items():
+            output[name] = pd.to_numeric(df[raw], errors='coerce')
+            output[name + '_status'] = df['x' + raw].astype('string').str.strip()
+        denom = output['total_students'].replace(0, np.nan)
+        for source, target in (('exclusive_distance', 'exclusive_share'),
+                               ('some_distance', 'some_share'),
+                               ('no_distance', 'no_distance_share')):
+            output[target] = output[source] / denom * 100
+        frames.append(output)
+        found.add(year)
+
+    if requested is not None and requested - found:
+        raise FileNotFoundError(f'Missing downloaded fall distance years: {sorted(requested - found)}')
+    if not frames:
+        raise FileNotFoundError(f'No distance enrollment CSV files found in {distance_dir}')
+    return pd.concat(frames, ignore_index=True)
 
 
 def clean_twelve_month_enrollment(enrollment_dir: str = 'twelve_month_enrollmentdata',
@@ -1096,12 +1185,74 @@ def clean_graduation(graduation_dir: str = 'graduationdata',
         master_df = pd.concat([master_df, pivoted_grads], ignore_index=True)
     
     return master_df
+
+
+def clean_graduation200(graduation_dir: str = 'graduation200data',
+                        cohort_type: str = 'both',
+                        year_range: Optional[Union[Tuple[int,int], List[int], int]] = None) -> pd.DataFrame:
+    '''Keep GR200's published cohort counts/rates for BA or less-than-4-year.
+
+    These are different entering cohorts from GR's 150% snapshot. The 200%
+    adjusted denominator accounts for additional exclusions, and the
+    less-than-four-year cohort includes certificate as well as degree seekers.
+    '''
+    types = {'bachelor': 0, 'less_than_four_year': 1}
+    if cohort_type not in (*types, 'both'):
+        raise ValueError("cohort_type must be 'both', 'bachelor', or 'less_than_four_year'")
+    requested = set(get_year_iter('graduation200', year_range)) if year_range is not None else None
+    source_cols = {raw for pair in GR200_FIELDS.values() for raw in pair}
+    flag_cols = {GR200_FLAG_EXCEPTIONS.get(raw, 'x' + raw) for raw in source_cols}
+    frames = []
+    found = set()
+
+    for file in sorted(os.listdir(graduation_dir)):
+        match = re.fullmatch(r'graduation200_(\d{4})\.csv', file, flags=re.IGNORECASE)
+        if not match:
+            continue
+        year = int(match.group(1))
+        if requested is not None and year not in requested:
+            continue
+        if not 2008 <= year <= 2024:
+            continue
+        desired = {'unitid', *source_cols, *flag_cols}
+        df = pd.read_csv(os.path.join(graduation_dir, file), dtype=str,
+                         index_col=False, low_memory=False,
+                         usecols=lambda c: c.lower().strip() in desired)
+        df.columns = df.columns.str.lower().str.strip()
+        required = {'unitid', 'barevct', 'l4revct', 'bagr200', 'l4gr200'}
+        if not required.issubset(df.columns):
+            raise ValueError(f'{file} is missing GR200 fields: {sorted(required - set(df.columns))}')
+        df = df.reindex(columns=sorted(desired))
+
+        for kind, idx in types.items():
+            if cohort_type not in ('both', kind):
+                continue
+            cohort_field = GR200_FIELDS['revised_cohort'][idx]
+            selected = df.loc[df[cohort_field].notna()].copy()
+            output = pd.DataFrame({'id': selected['unitid'].str.strip(),
+                                   'year': year, 'cohort_type': kind,
+                                   'cohort_year': year - (8 if idx == 0 else 4),
+                                   'collection_phase': 'supplemental' if year == 2008 else 'standard'})
+            for name, pair in GR200_FIELDS.items():
+                raw = pair[idx]
+                flag = GR200_FLAG_EXCEPTIONS.get(raw, 'x' + raw)
+                output[name] = pd.to_numeric(selected[raw], errors='coerce')
+                output[name + '_status'] = selected[flag].astype('string').str.strip()
+            frames.append(output)
+        found.add(year)
+
+    if requested is not None and requested - found:
+        raise FileNotFoundError(f'Missing downloaded GR200 years: {sorted(requested - found)}')
+    if not frames:
+        raise FileNotFoundError(f'No GR200 CSV files found in {graduation_dir}')
+    return pd.concat(frames, ignore_index=True)
         
 
 CLEANERS = {
     'characteristics' : clean_characteristics,
     'admissions' : clean_admissions,
     'enrollment' : clean_enrollment,
+    'distance_enrollment' : clean_distance_enrollment,
     'twelve_month_enrollment' : clean_twelve_month_enrollment,
     'retention' : clean_retention,
     'tuition' : clean_tuition,
@@ -1110,5 +1261,6 @@ CLEANERS = {
     'completion' : clean_completion,
     'completers' : clean_completers,
     'cip' : clean_cip,
-    'graduation' : clean_graduation
+    'graduation' : clean_graduation,
+    'graduation200' : clean_graduation200
 }

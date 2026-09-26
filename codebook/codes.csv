@@ -54,6 +54,11 @@ TwelveMonthEnrollment,LSTUDY,2002-2019,999,total,Institution-wide generated tota
 TwelveMonthEnrollment,EFFYALEV,2020-2025,1,total,Institution-wide total,EFFY2025,Overlaps level rows
 TwelveMonthEnrollment,EFFYALEV,2020-2025,2,undergrad,All undergraduates total,EFFY2025,Do not sum nested undergraduate detail codes
 TwelveMonthEnrollment,EFFYALEV,2020-2025,12,grad,All graduates total,EFFY2025,
+DistanceEnrollment,EFDELEV,2012-2024,1,total,All fall students enrolled for credit,EF2012A_DIST,Overlaps level 2 and 12
+DistanceEnrollment,EFDELEV,2012-2024,2,undergrad,All undergraduates,EF2012A_DIST,Overlaps subgroups 3 and 11
+DistanceEnrollment,EFDELEV,2012-2024,3,degree_seeking,Degree/certificate-seeking undergraduates,EF2012A_DIST,Subset of level 2
+DistanceEnrollment,EFDELEV,2012-2024,11,non_degree,Non-degree/certificate-seeking undergraduates,EF2012A_DIST,Subset of level 2
+DistanceEnrollment,EFDELEV,2012-2024,12,grad,Graduate students,EF2012A_DIST,
 Completion,MAJORNUM,2001-2025,1,first,First major within C-A by CIP and award level,C2001_A,Unrecorded in 1984-2000 A files
 Completion,MAJORNUM,2001-2025,2,second,Second major within C-A by CIP and award level,C2001_A,A second major is not a distinct second graduate
 Completers,AWLEVELC,2012-2019,01,certificate_under_1_year,Award shorter than one academic year,C2012_C,Source may include leading zeroes
@@ -71,3 +76,5 @@ Retention,XRET_PCF|XRET_PCP,2003-2024,R,R,Reported source value,EF2003D,Status m
 Retention,XRET_PCF|XRET_PCP,2003-2024,Z,Z,Implied zero,EF2003D,Not the same as a missing historical field
 Retention,XRET_PCF|XRET_PCP,2003-2024,A,A,Not applicable,EF2003D,Not the same as zero
 Retention,XRET_PCF|XRET_PCP,2003-2024,B,B,Left blank,EF2003D,Not the same as a structural absence
+Graduation200,BAREVCT,2008-2024,<populated>,bachelor,Applicable bachelor's entering cohort,GR200_24,cohort_year=year-8
+Graduation200,L4REVCT,2008-2024,<populated>,less_than_four_year,Applicable less-than-four-year degree/certificate entering cohort,GR200_24,cohort_year=year-4

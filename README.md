@@ -146,6 +146,18 @@ enrolldat = Enrollment(year_range=(1984,2023))
 enroll_df = enrolldat.run(merge_with_char=False,
                           student_level='undergrad')
 ```
+- **DistanceEnrollment** (fall students taking exclusively, some, or no distance education courses; 2012–2024)
+```python
+from genpeds import DistanceEnrollment
+
+distance = DistanceEnrollment((2012, 2024))
+undergrad_distance = distance.run(student_level='undergrad', merge_with_char=True)
+graduate_distance = distance.run(student_level='grad')
+```
+
+An IPEDS distance education course delivers its **instructional content exclusively at a distance**; an on-campus orientation, exam or academic support visit does not by itself disqualify it. `exclusive_distance`, `some_distance`, and `no_distance` count fall students in those mutually exclusive categories, not numbers of courses. `exclusive_same_state`, `exclusive_other_us_state`, `exclusive_us_state_unknown`, `exclusive_outside_us`, and `exclusive_location_unknown` describe **exclusively** distance students only. The three `*_share` fields divide each category by `total_students` and are missing for a zero/missing denominator. Each reported count has a matching NCES `_status` flag.
+
+`student_level` is `'undergrad'` (default), `'grad'`, `'total'`, `'degree_seeking'` (undergrad), `'non_degree'` (undergrad), or `'all'`. The `total` row overlaps the other levels; degree-seeking and non-degree rows subdivide undergraduates. This separate class uses the `EF*_A_DIST` files and caches downloads in `distance_enrollmentdata/`; its row categories must not be added wholesale to `Enrollment` or `TwelveMonthEnrollment`.
 - **TwelveMonthEnrollment** (unduplicated July–June enrollment headcounts; periods ending 2002–2025)
 ```python
 from genpeds import TwelveMonthEnrollment
@@ -277,6 +289,19 @@ graddat = Graduation(year_range=(2000,2023))
 grad_df = graddat.run(degree_level='bach',
                       merge_with_char=True)
 ```
+
+`Graduation()` now defaults to its configured 2000–2024 years. The rates above use **150%** of normal completion time for the selected bachelor or associate cohort.
+
+- **Graduation200** (100%, 150%, and 200%-of-normal-time outcomes; reporting years 2008–2024)
+```python
+from genpeds import Graduation200
+
+rates = Graduation200([2008, 2009, 2024])
+df = rates.run(cohort_type='both', merge_with_char=True)
+bachelor_df = rates.run(cohort_type='bachelor')
+```
+
+`cohort_type` is `'bachelor'`, `'less_than_four_year'`, or `'both'` (default). The latter includes **degree and certificate** seekers at less-than-four-year institutions; it is not an associate-only group. For `year=2024`, `cohort_year` is 2016 for bachelor's entrants and 2020 for less-than-four-year entrants. `adjusted_cohort_150` and `adjusted_cohort_200` may differ because additional exclusions are allowed; `completed_150_to_200` is an incremental count, whereas `completed_200` is cumulative. `rate_100`, `rate_150`, and `rate_200` are NCES's published percentages, not rates recalculated or clamped by the package. `still_enrolled` starts in 2011, and `collection_phase='supplemental'` identifies the initial 2008 wave. Counts and rates have `_status` flags. GR200 follows older entering cohorts than `Graduation` for the same reporting year, so it remains a separate class. Downloads are cached in `graduation200data/`.
 
 These classes support institution-level trends across admissions, enrollment, persistence, completions, prices, and aid. Further IPEDS subjects and additional fields within existing subjects can be added over time.
 
