@@ -1,6 +1,6 @@
 {
     "characteristics": {
-        "description": "Institutional names, addresses, location and classification for each year, 1984-2025. Some codes and fields have shorter histories.",
+        "description": "Institutional Characteristics: names, addresses, location and classification for each year, 1984-2025. Some codes and fields have shorter histories.",
         "years_available": [1984,2025],
         "endpoints": {
             "1984": "IC1984",
