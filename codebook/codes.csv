@@ -1,0 +1,73 @@
+api_class,source_field,years,raw_value,api_value,meaning,source_dictionary_stem,interpretation_note
+Characteristics,CONTROL,1984-1985,0,Combined public and private,Historical mixed-control category,IC1984,Not the later administrative-unit code
+Characteristics,CONTROL,1984-1985,1,Public,Public only,IC1984,
+Characteristics,CONTROL,1984-1985,2,Private (profit status unspecified),Private only; not necessarily nonprofit,IC1984,Do not equate to code 2 after 1985
+Characteristics,CONTROL,1986-2025,1,Public,Public institution,IC1986_A,
+Characteristics,CONTROL,1986-2025,2,Private nonprofit,Private nonprofit institution,IC1986_A,
+Characteristics,CONTROL,1986-2025,3,Private for-profit,Private for-profit institution,IC1986_A,
+Characteristics,ICLEVEL,1984-2025,1,Four-year or above,Programs of four or more years,IC1984,
+Characteristics,ICLEVEL,1984-2025,2,Two-year,Programs at least two but less than four years,IC1984,
+Characteristics,ICLEVEL,1984-1985,7,<NA>,Unclassified or none of the above,IC1984,Not less-than-two-year
+Characteristics,ICLEVEL,1986-2025,3,Less-than-two-year,Programs below two years,IC1986_A,
+Characteristics,SECTOR,1986-2025,0,Administrative unit,Not an institutional sector,IC1986_A,
+Characteristics,SECTOR,1986-2025,1,"Public, four-year or above",Public four-year sector,IC1986_A,
+Characteristics,SECTOR,1986-2025,2,"Private nonprofit, four-year or above",Private nonprofit four-year sector,IC1986_A,
+Characteristics,SECTOR,1986-2025,3,"Private for-profit, four-year or above",Private for-profit four-year sector,IC1986_A,
+Characteristics,SECTOR,1986-2025,4,"Public, two-year",Public two-year sector,IC1986_A,
+Characteristics,SECTOR,1986-2025,5,"Private nonprofit, two-year",Private nonprofit two-year sector,IC1986_A,
+Characteristics,SECTOR,1986-2025,6,"Private for-profit, two-year",Private for-profit two-year sector,IC1986_A,
+Characteristics,SECTOR,1986-2025,7,"Public, less-than-two-year",Public less-than-two-year sector,IC1986_A,
+Characteristics,SECTOR,1986-2025,8,"Private nonprofit, less-than-two-year",Private nonprofit less-than-two-year sector,IC1986_A,
+Characteristics,SECTOR,1986-2025,9,"Private for-profit, less-than-two-year",Private for-profit less-than-two-year sector,IC1986_A,
+Characteristics,HBCU,1992-1994,<blank>,False,Explicitly not an HBCU in early header dictionaries,IC1993_A,1995-97 nonresponse has different treatment
+Characteristics,TRIBAL,1993-1994,<blank>,False,Explicitly not a tribal college in early header dictionaries,IC1993_A,1995-97 nonresponse has different treatment
+Characteristics,HBCU|TRIBAL,1995-1997,-1,<NA>,Historical missing or nonresponse,ic9596_A,Do not treat as False
+Characteristics,HBCU|TRIBAL,1998-2025,1,True,Yes,IC98hdac,
+Characteristics,HBCU|TRIBAL,1998-2025,2,False,No,IC98hdac,
+Characteristics,HBCU|TRIBAL,1998-2025,-3,<NA>,Not available,HD2025,Retain raw code
+Characteristics,DEGGRANT,2000-2025,1,True,Degree-granting institution,HD2002,
+Characteristics,DEGGRANT,2000-2025,2,False,Non-degree-granting institution,HD2002,
+Characteristics,LOCALE,1995-2004,1,legacy|1,Large city,ic9596_A,Not equivalent to modern 11 on a code-only basis
+Characteristics,LOCALE,1995-2004,2,legacy|2,Mid-size city,ic9596_A,
+Characteristics,LOCALE,1995-2004,3,legacy|3,Urban fringe of large city,ic9596_A,
+Characteristics,LOCALE,1995-2004,4,legacy|4,Urban fringe of mid-size city,ic9596_A,
+Characteristics,LOCALE,1995-2004,5,legacy|5,Large town,ic9596_A,
+Characteristics,LOCALE,1995-2004,6,legacy|6,Small town,ic9596_A,
+Characteristics,LOCALE,1995-2004,7,legacy|7,Rural,ic9596_A,
+Characteristics,LOCALE,1995-2004,9,legacy|9,Not assigned,ic9596_A,
+Characteristics,LOCALE,2005-2025,11,urban_centric|11,City: Large,HD2025,
+Characteristics,LOCALE,2005-2025,12,urban_centric|12,City: Midsize,HD2025,
+Characteristics,LOCALE,2005-2025,13,urban_centric|13,City: Small,HD2025,
+Characteristics,LOCALE,2005-2025,21,urban_centric|21,Suburb: Large,HD2025,
+Characteristics,LOCALE,2005-2025,22,urban_centric|22,Suburb: Midsize,HD2025,
+Characteristics,LOCALE,2005-2025,23,urban_centric|23,Suburb: Small,HD2025,
+Characteristics,LOCALE,2005-2025,31,urban_centric|31,Town: Fringe,HD2025,
+Characteristics,LOCALE,2005-2025,32,urban_centric|32,Town: Distant,HD2025,
+Characteristics,LOCALE,2005-2025,33,urban_centric|33,Town: Remote,HD2025,
+Characteristics,LOCALE,2005-2025,41,urban_centric|41,Rural: Fringe,HD2025,
+Characteristics,LOCALE,2005-2025,42,urban_centric|42,Rural: Distant,HD2025,
+Characteristics,LOCALE,2005-2025,43,urban_centric|43,Rural: Remote,HD2025,
+TwelveMonthEnrollment,LSTUDY,2002-2010,1,undergrad,Undergraduate total,EFFY2002,
+TwelveMonthEnrollment,LSTUDY,2002-2010,2,first_professional,First-professional total,EFFY2002,Not included in grad row
+TwelveMonthEnrollment,LSTUDY,2002-2019,3,grad,Graduate total,EFFY2011,Before 2011 first-professional was separate
+TwelveMonthEnrollment,LSTUDY,2002-2019,999,total,Institution-wide generated total,EFFY2002,Overlaps level rows
+TwelveMonthEnrollment,EFFYALEV,2020-2025,1,total,Institution-wide total,EFFY2025,Overlaps level rows
+TwelveMonthEnrollment,EFFYALEV,2020-2025,2,undergrad,All undergraduates total,EFFY2025,Do not sum nested undergraduate detail codes
+TwelveMonthEnrollment,EFFYALEV,2020-2025,12,grad,All graduates total,EFFY2025,
+Completion,MAJORNUM,2001-2025,1,first,First major within C-A by CIP and award level,C2001_A,Unrecorded in 1984-2000 A files
+Completion,MAJORNUM,2001-2025,2,second,Second major within C-A by CIP and award level,C2001_A,A second major is not a distinct second graduate
+Completers,AWLEVELC,2012-2019,01,certificate_under_1_year,Award shorter than one academic year,C2012_C,Source may include leading zeroes
+Completers,AWLEVELC,2020-2025,11,certificate_under_12_weeks,Certificate less than 12 weeks,C2020_C,Replaces part of old code 1
+Completers,AWLEVELC,2020-2025,12,certificate_12_weeks_to_1_year,Certificate 12 weeks to less than one year,C2020_C,Replaces part of old code 1
+Completers,AWLEVELC,2012-2025,02,certificate_1_to_4_years,Certificate at least one but less than four academic years,C2012_C,Source may include leading zeroes
+Completers,AWLEVELC,2012-2025,03,assc,Associate degree,C2012_C,Source may include leading zeroes
+Completers,AWLEVELC,2012-2025,05,bach,Bachelor degree,C2012_C,Source may include leading zeroes
+Completers,AWLEVELC,2012-2025,07,mast,Master degree,C2012_C,Source may include leading zeroes
+Completers,AWLEVELC,2012-2025,09,doct,Doctor degree category,C2012_C,Distinct from C-A doctoral 17-19 since 2010
+Completers,AWLEVELC,2012-2025,10,postgraduate_certificate,Postbaccalaureate or post-master certificate,C2012_C,
+Completion,AWLEVEL,1984-2009,9,doct,Doctoral award filter,C2009_A,C-A doctoral code changes from 2010
+Completion,AWLEVEL,2010-2025,17-19,doct,Doctoral award filters aggregated within CIP,C2010_A,Not the C-C AWLEVELC=9 person count
+Retention,XRET_PCF|XRET_PCP,2003-2024,R,R,Reported source value,EF2003D,Status meanings should be checked in each year's dictionary
+Retention,XRET_PCF|XRET_PCP,2003-2024,Z,Z,Implied zero,EF2003D,Not the same as a missing historical field
+Retention,XRET_PCF|XRET_PCP,2003-2024,A,A,Not applicable,EF2003D,Not the same as zero
+Retention,XRET_PCF|XRET_PCP,2003-2024,B,B,Left blank,EF2003D,Not the same as a structural absence

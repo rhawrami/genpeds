@@ -1,0 +1,107 @@
+# Harmonization guide
+
+This guide describes **what `genpeds` actually downloads and transforms**, with the source-year boundaries that matter for analysis. The companion [variable codebook](variables.csv) documents every public `get_available_vars()` entry; [changes.csv](changes.csv) lists the specific change and its NCES dictionary; [codes.csv](codes.csv) records selected category codes. The package's `src/genpeds/cleaners.py`, `core.py`, and `cfg.json` are the implementation of record.
+
+IPEDS publishes **institution-level aggregates**, not person-level records. A question without a gender split can still be useful and is included where supported. Unless specified, the package does not impute missing values or construct a long-run crosswalk between changed survey concepts.
+
+## Year and join semantics
+
+The class constructor accepts a single year, inclusive `(start, end)` tuple, or list of years. `scrape()` caches downloaded source files in a subject-named directory in the working directory; `clean()` reads the cache; `run()` does both. Most `run()` methods can `merge_with_char=True` to join `Characteristics` on `id` (NCES `UNITID`) **and the API's `year`**. `rm_disk=True` removes the downloaded directories used by that run. No merge changes what the source file's year measures.
+
+| Output | Meaning of `year` | Example |
+| --- | --- | --- |
+| `Characteristics`, `Admissions`, `Enrollment` | Header / admissions / fall snapshot year | `Characteristics(2025)` describes the 2025–26 IC collection; fall `Enrollment` currently ends in 2024. |
+| `TwelveMonthEnrollment` | End of July–June enrollment period | `year=2025`, `period_start_year=2024`: July 2024–June 2025. |
+| `Retention` | Follow-up fall; **not** the entering cohort year | `year=2024`, `cohort_year=2023`. |
+| `Tuition` | **Start** of published academic/program price year | `year=2024` prices for 2024–25. |
+| `StudentAid`, `VeteransAid` | **End** of aid/benefit year | `year=2024`, `aid_year_start=2023`: aid during 2023–24; `SFA2324`. |
+| `Completion`, `Completers` | **End** of July–June award period | `C2025_A/B/C` covers July 2024–June 2025; no six-year cohort is implied. |
+| `Graduation` | Graduation-rate reporting/status year for an **older entering cohort** | Associate/bachelor 150%-of-normal-time cohorts started about three/six years earlier. |
+| `Cip` | Year of the Completions **data dictionary** | Describes that year's code; it does not date an entering cohort. |
+
+**A shared `year` does not guarantee the same time window**: `Tuition(2024)` covers 2024–25 prices while `StudentAid(2024)` covers 2023–24 aid. A 2025 Characteristics merge onto `TwelveMonthEnrollment(2025)` attaches a later fall institutional snapshot to the preceding July–June period. Align the period explicitly before comparing or joining prices, aid, enrollment, and awards.
+
+The directory of [configured sources](source_files.csv) preserves the exact ZIP stems (including historical renames, lower-case names, and finance-style academic-year names where applicable). The package uses `https://nces.ed.gov/ipeds/datacenter/data/` for its configured years through 2022 and `https://nces.ed.gov/ipeds/complete-data-files/` afterward. `Cip` downloads the **Completions dictionary** instead of the awards CSV. Dictionary link examples: [C2000_A](https://nces.ed.gov/ipeds/datacenter/data/C2000_A_Dict.zip), [C2001_A](https://nces.ed.gov/ipeds/datacenter/data/C2001_A_Dict.zip), [C2025_A](https://nces.ed.gov/ipeds/complete-data-files/C2025_A_Dict.zip).
+
+## Grains and duplication
+
+| API class | Current coverage | Output grain / selector | Source |
+| --- | --- | --- | --- |
+| `Characteristics` | 1984–2025 | Institution-year; **1986 exception** below | Year-dependent IC/FA/HD headers. |
+| `Admissions` | 2001–2024 | Institution-year; first-time applicant/admit/enroll measures | IC through 2013, ADM from 2014. |
+| `Enrollment` | 1984–2024 | Institution-fall year × `studentlevel` (`undergrad` or `grad`) | EF-A fall level/attendance lines. |
+| `TwelveMonthEnrollment` | Periods ending 2002–2025 | Institution-period × `student_level` (`undergrad`, `grad`, `total`, early `first_professional`); `'all'` includes overlapping total | EFFY. |
+| `Retention` | Follow-up falls 2003–2024 | Institution-follow-up fall; FT/PT rates and later cohort counts as separate columns | EF-D. |
+| `Tuition` | Price years starting 2000–2024 | Institution-price year × `reporter` (`academic`, `program`) | IC `_AY/_PY` through 2023; COST1 in 2024. |
+| `StudentAid` | Aid years ending 2002–2024 | Institution-aid year × `reporter`; FTFT and all-UG measures in **different columns** | SFA; COST2 for 2024 net price. |
+| `VeteransAid` | Aid years ending 2014–2024 | Institution-aid year; UG/graduate and program counts in separate columns | SFAV. |
+| `Completion` | Award years ending 1984–2025 | Institution-year × CIP × selected `deglevel`/`major_type`; **awards by field**, not unique people | C-A (older differently named extracts). |
+| `Completers` | Award years ending 2012–2025 | B: institution-year distinct people across all awards; C: institution-year-award level distinct people with age | C-B or C-C (modern files only). |
+| `Graduation` | 2000–2024 | Institution-status year × selected associate/bachelor cohort | GR, selected 150% rows. |
+| `Cip` | 1984–2025 | CIP code × year description | Completions data dictionary. |
+
+`Characteristics(1986)` includes **different institutions with the same placeholder `UNITID=247719`**. It returns the source rows, but subject classes reject `merge_with_char=True` when the selected header has duplicate `(id, year)` keys; otherwise a join could multiply observations. No artificial ID crosswalk is constructed. A UNITID may also change over decades as institutions split or combine.
+
+## Subject-by-subject harmonization
+
+### Characteristics
+
+The cleaner trims identifiers, title-cases name/address/city, expands `STABBR` to a state name, and selects URL from 1999 and coordinates from 2009. It preserves raw `CONTROL`, `ICLEVEL`, `SECTOR`, `HBCU`, `TRIBAL`, `DEGGRANT`, `LOCALE`, and `C21BASIC` as `*_code`, alongside mapped labels/nullable booleans. Raw codes such as `-3` remain visible even if no label is assigned.
+
+- **1984–85** `CONTROL=2` is simply *private*, not the **1986+** `CONTROL=2` *private nonprofit*; `CONTROL=0` also has an early combined-public/private meaning. `ICLEVEL=7` in 1984–85 means unclassified, **not** less-than-two-year (later code 3). See [IC1984 dictionary](https://nces.ed.gov/ipeds/datacenter/data/IC1984_Dict.zip) and [IC1986_A dictionary](https://nces.ed.gov/ipeds/datacenter/data/IC1986_A_Dict.zip).
+- HBCU starts **1992**, tribal **1993**. Early blank/no values (1992–94) are handled differently from **1995–97** `-1` missing/nonresponse; later 1/2 mean yes/no. The API keeps nullable booleans rather than turning an unknown into `False` ([IC1993_A](https://nces.ed.gov/ipeds/datacenter/data/IC1993_A_Dict.zip), [IC98hdac](https://nces.ed.gov/ipeds/datacenter/data/IC98hdac_Dict.zip)).
+- `LOCALE` starts **1995**, and changes from 1–9 legacy urbanization codes to **11–43 urban-centric** codes in **2005**. `locale_scheme` identifies the scheme. [codes.csv](codes.csv) records their labels; the API does **not** claim a one-to-one crosswalk. `carnegie_2021_basic_code` starts **2021** and is intentionally named for its vintage.
+
+### Admissions
+
+Year-dependent IC/ADM raw columns are renamed and converted to numeric; in **2001** FT and PT male/female enrollment are added before yields are computed. When the source total applications/admissions/enrollment is absent, the cleaner constructs it from men + women. Acceptance = admitted/applied × 100; yield = enrolled/admitted × 100, with zero denominators missing. Men’s shares divide by the source or constructed total. Source `SATPCT`/`ACTPCT` describes **first-time degree/certificate-seeking score submitters**, not the share of all admitted applicants ([ADM2024 dictionary](https://nces.ed.gov/ipeds/complete-data-files/ADM2024_Dict.zip)). The cleaner drops several intermediate female counts after calculating female rates. Recent sources can contain another/unknown gender: a binary reconstruction is **not** a universal reported total. Test-score fields do not occur identically each year; consult a year's dictionary.
+
+### Fall Enrollment
+
+`Enrollment` selects specific EF-A `LINE` rows for the requested level, then sums FT/PT counts by institution and calculates sex/race shares. UG uses lines **1/15 in 1984–85** and **8/22 from 1986**. Graduate lines are year-dependent: **1984–85** `11,25,10,24`; **1986 and 1990–98** `14,28,9,10,23,24`; **1987–89** `14,28`; **1999** `32,52,16`; **2000–08** `11,25,9,23`; **2009–24** `11,25`. Some older graduate rules include separately counted first-professional students. This is a fall snapshot, not an unduplicated annual count. Older `EFRACE##` fields and newer `EFTOTL*` / named race fields are selected according to which occur in a file. Only White, Black, Hispanic, Asian and men/women totals are exposed; other NCES race categories are not included in this API. Shares use the sum of **men + women** as denominator; do not interpret these as every category in expanded gender reporting. See the historical [EF1984](https://nces.ed.gov/ipeds/datacenter/data/EF1984_Dict.zip) and modern [EF2024A](https://nces.ed.gov/ipeds/complete-data-files/EF2024A_Dict.zip) dictionaries.
+
+### TwelveMonthEnrollment
+
+`year` is the ending year of the July–June period. EFFY2002–07 uses `FYRACE15/16/24` for men/women/grand total; from **2008**, `EFYTOTLM/LW/LT` and separate modern Asian/Pacific Islander fields appear. The older `asian_pacific` combined category is **not** added to or equated with the later `asian` / `pacific_islander` counts. Other race fields also inherit NCES's changing classifications. `_status` fields preserve raw X flags where present.
+
+Through **2019**, `LSTUDY` selects a level row (`1` UG, `3` graduate, `999` generated total; `2` first-professional through **2010**). From **2020**, `EFFYALEV` codes `2` UG, `12` graduate, `1` institution total are selected; many *other* EFFYALEV rows are nested degree-seeking/attendance/transfer subsets and must not be summed. In `student_level='all'` the total **overlaps** the other rows. The early graduate count excludes separately reported first-professional students; later graduate counts include them, so a direct graduate trend crosses a definition break. See [EFFY2002](https://nces.ed.gov/ipeds/datacenter/data/EFFY2002_Dict.zip), [EFFY2011](https://nces.ed.gov/ipeds/datacenter/data/EFFY2011_Dict.zip) and [EFFY2025](https://nces.ed.gov/ipeds/complete-data-files/EFFY2025_Dict.zip). Earlier combined 12-month data also occur in EF-D, but this class intentionally starts at the separately configured **2002 EFFY** series.
+
+### Retention
+
+`year` is the follow-up fall, `cohort_year` is the prior fall. EF2003D–EF2006D report `RET_PCF/RET_PCP` FT/PT **published rates** but not their underlying cohort counts. **2007** adds FT/PT cohorts, exclusions, adjusted cohorts and retained students; **2016** adds study-abroad inclusions to the denominator. Before introduction those fields remain missing, not zero. Raw X flags are exposed as `*_status`; a 2004 `RET_PCP ` trailing-space header is normalized. The API keeps NCES's published percentages instead of back-computing rounded rates. [`EF2003D`](https://nces.ed.gov/ipeds/datacenter/data/EF2003D_Dict.zip), [`EF2007D`](https://nces.ed.gov/ipeds/datacenter/data/EF2007D_Dict.zip), [`EF2016D`](https://nces.ed.gov/ipeds/datacenter/data/EF2016D_Dict.zip).
+
+### Tuition
+
+`Tuition` returns `academic`, `program`, or `both` reporting types. AY has in-district/in-state/out-of-state full-time undergraduate tuition, required fees and *separately published* FTFT tuition-plus-fees; these are not always arithmetic sums of the separate fields. PY has largest-program tuition-plus-fees (`CHG1PY3`) and a separate `CIPTUIT1` measure for programs **without** FTFT undergraduates from **2006**. Published amounts are nominal dollars, not aid-adjusted net price. Both IC*_AY/PY file families start in **2000**. The **2001** files unusually include universe-wide nonreporter rows, which the cleaner filters using empty AY prices or PY `CIPCODE1=-2`. `COST1_2024` combines both and uses that marker to distinguish reporters. `CHG*AY3` / `CHG1PY3` refer to the **current** listed price year; other fields in the same file repeat prior-year prices. [IC2001 price dictionaries](https://nces.ed.gov/ipeds/datacenter/data/IC2001_AY_Dict.zip), [IC2006_PY](https://nces.ed.gov/ipeds/datacenter/data/IC2006_PY_Dict.zip), [COST1_2024](https://nces.ed.gov/ipeds/complete-data-files/COST1_2024_Dict.zip).
+
+### StudentAid and VeteransAid
+
+`StudentAid` separates FTFT aid (`ftft_*`) from aid to *all* undergraduates (`ug_*`). Early denominator fields are `SCFA1N/SCFA2` (academic-year reporters) or `SCFY1N/SCFY2` (program-year reporters); later shared `SCUGFFN/SCUGRAD` are used when populated. The output's `reporter` identifies the relevant cohort. Long-running FTFT federal/state/institutional grants and student loans are present from **aid year ending 2002**. Separate FTFT Pell, combined grant and federal-loan recipient categories begin **2008**; all-UG recipient counts and dollar totals begin **2009**. FTFT **student loans** can include nonfederal loans and are not interchangeable with the federal-loan subset. Grant recipient categories can overlap: adding categories does not yield unique people. `*_avg` amounts are among recipients, not all enrollees. `ftft_any_aid_pct` is NCES's reported percentage, not a recalculation.
+
+Average `ftft_net_price` measures **cost of attendance after qualifying grants for in-state/in-district FTFT grant recipients**, not tuition or a cash award. Its 2009–23 values are from `SFA*_Dict`-documented `NPIST2`; for the **2023–24 aid year** the field moved from SFA to **`COST2_2024`**, which is left-joined on institution so schools absent from the Cost supplement remain in SFA with missing net price. `year=2024` means *aid 2023–24*. NCES wording changes from received to awarded across years and the 2024 Cost calculation changes housing terminology; do not read these as a single student-level financial panel. [SFA0102](https://nces.ed.gov/ipeds/datacenter/data/SFA0102_Dict.zip), [SFA0809](https://nces.ed.gov/ipeds/datacenter/data/SFA0809_Dict.zip), [SFA2324](https://nces.ed.gov/ipeds/complete-data-files/SFA2324_Dict.zip), [COST2_2024](https://nces.ed.gov/ipeds/complete-data-files/COST2_2024_Dict.zip).
+
+`VeteransAid` is **separate**: SFAV from aid year ending **2014** reports undergraduate and graduate Post-9/11 GI Bill/DoD Tuition Assistance counts, totals and per-recipient averages. SFAV includes **graduate-only institutions absent from SFA**; folding it into an SFA left join would lose them. Benefits represent amounts **known to the institution**, not all benefits an individual necessarily received. [SFAV1314](https://nces.ed.gov/ipeds/datacenter/data/SFAV1314_Dict.zip), [SFAV2324](https://nces.ed.gov/ipeds/complete-data-files/SFAV2324_Dict.zip).
+
+### Completion, Completers, and Cip
+
+**`Completion` counts awards by CIP, selected award level and major reporting category; it does not count unique graduates.** The `MAJORNUM` field is **absent in 1984–2000** C-A sources and available from **2001** (`1` first, `2` second). Default `major='both'` preserves old records with `major_type='unspecified'` and sums both modern categories within a CIP; `major='first'/'second'` rejects any requested pre-2001 years rather than silently labeling them. Compare the actual [C2000_A](https://nces.ed.gov/ipeds/datacenter/data/C2000_A_Dict.zip) and [C2001_A](https://nces.ed.gov/ipeds/datacenter/data/C2001_A_Dict.zip) dictionaries. Associate/bachelor/master raw AWLEVEL are 3/5/7; the doctor's award filter changes from **9 before 2010** to **17–19 from 2010**. The cleaner groups matching rows by institution and CIP, then calculates men/race shares from the summed counts. A field of study reported as a second major is **not an additional unique graduate**. Totals and aggregate CIP codes (e.g. grand total `99` and category-level CIP codes) can overlap detailed CIPs; **never sum all CIP rows** to estimate national awards.
+
+**`Completers` counts people**, beginning **2012**, from modern C-B (one unduplicated institution total) or C-C (one unduplicated count per award level with age bands). Older 1990s C-`_B` means something else and is not part of this API. A person awarded degrees at multiple levels can occur in more than one C-C row; **summing C-C levels does not reproduce C-B**. C-C `AWLEVELC` of `03/05/07/09` (or 3/5/7/9 without zero padding) means associate/bachelor/master/doctor; C-A's 17–19 doctor codes should not be applied to C-C. For short certificates, code **1 before 2020** splits into **11/12 from 2020**. `source_award_code` preserves the original spelling; `award_level_code` normalizes leading zeroes. B has no age or field-of-study breakdown. [C2012_B](https://nces.ed.gov/ipeds/datacenter/data/C2012_B_Dict.zip), [C2012_C](https://nces.ed.gov/ipeds/datacenter/data/C2012_C_Dict.zip), [C2020_C](https://nces.ed.gov/ipeds/datacenter/data/C2020_C_Dict.zip), [C2025_C](https://nces.ed.gov/ipeds/complete-data-files/C2025_C_Dict.zip).
+
+`Cip` parses each year's C-A dictionary (HTML or Excel `Frequencies`) to label that year's CIP codes. `Completion.run(get_cip_codes=True)` joins by **CIP and year**. CIP versions (including the 2020 taxonomy used in C2025_A) are not automatically converted into a single field-of-study ontology. Codes like `99` are totals. [C2025_A dictionary](https://nces.ed.gov/ipeds/complete-data-files/C2025_A_Dict.zip).
+
+### Graduation
+
+`Graduation` selects bachelor's `SECTION=2`, `GRTYPE=8` adjusted cohort and `9` graduated; or associate's `SECTION=4`, `GRTYPE=29/30`, restricting `CHRTSTAT` to `12–13`. It pivots source counts by institution and calculates sex/race **graduation percentages at 150% of normal time** as graduates ÷ adjusted cohort × 100. A bachelor cohort is tracked about six years and an associate cohort about three; the row's `year` is **not** the year of admission or a simple count of all annual degrees. It is not the GR200 200% rate nor OM 4/6/8-year outcomes. Earlier and later race columns use different raw names (`GRRACE##` versus named `GRTOTL*` and race columns). [GR2024 dictionary](https://nces.ed.gov/ipeds/complete-data-files/GR2024_Dict.zip).
+
+The current `Graduation()` constructor defaults to `(1984, 2024)` even though the configured GR endpoints start at **2000**. Pass `Graduation((2000, 2024))` (or an explicit subset) until that default is corrected; a 1980s GR filename is not evidence of a survey release.
+
+## Missing data and source flags
+
+- NCES source ZIPs often have `X...` companion columns with status codes such as **R** reported, **Z** implied zero, **A** not applicable and **B** blank. Other values identify particular corrections/imputation procedures; their exact definitions belong to the **year-specific dictionary**, not a single global code table. The newer `Retention`, `Tuition`, `StudentAid`, `VeteransAid`, `TwelveMonthEnrollment` and `Completers` APIs retain selected flags in `*_status` columns. Older `Admissions`, `Enrollment`, `Completion` and `Graduation` cleaners generally **do not** expose source flags.
+- A column introduced in a later year is returned as missing (`NaN` for numeric, `<NA>` for a status), **not zero**, in the earlier years of APIs with fixed output schemas. A present source field can also be NA because it is not applicable, the institution did not report, or it was suppressed. The older aggregate cleaners may use pandas group sums that produce zero where all selected input values were missing; **do not assume their zeros always mean a measured zero**.
+- The downloader extracts one CSV from each ZIP, preferring a lexically later `_rv` revised file where present. Recent files can be provisional and subsequently revised. It does not attach a release-version column. The research [data release schedule](https://nces.ed.gov/ipeds/survey-components/data-release-schedule) distinguishes provisional and final releases. Record ZIP names and download dates in reproducible downstream analyses.
+
+## Maintaining this reference
+
+Changes to `cfg.json` variable descriptions, `VARIABLE_RENAME`, or the source-field maps require `python codebook/build.py` and a review of the affected variable rows. **The generated CSV cannot discover semantic comparability from a column name.** Edit the curated [changes.csv](changes.csv), [codes.csv](codes.csv), and this guide when year/denominator/row-grain rules change; add dictionary links for the years checked. Check output-column coverage and generated snapshots using the workflow in [README.md](README.md). The package itself does not bundle `codebook/`.
