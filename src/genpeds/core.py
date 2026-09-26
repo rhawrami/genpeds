@@ -8,6 +8,7 @@ import pandas as pd
 
 from genpeds.downloader import scrape_ipeds_data, get_year_iter
 from genpeds.cleaners import CLEANERS, _validate_om_selection
+from genpeds.human_resources import HR_DATASETS, HR_VARIABLES, dataset_vars
 
 
 def _remove_download_dir(directory: str) -> None:
@@ -402,6 +403,40 @@ class TwelveMonthEnrollment(IPDS):
         return df
 
 
+class InstructionalActivity(IPDS):
+    '''IPEDS 12-month instructional hours and full-time equivalent students.'''
+    subject = 'instructional_activity'
+
+    def __init__(self,
+                 year_range: Optional[Union[Tuple[int,int], List[int], int]] = None):
+        '''EFIA reporting periods ending 2002-2025; tuple, list, or single year.'''
+        get_year_iter(self.subject, year_range)
+        super().__init__(year_range)
+
+    def clean(self,
+              activity_dir: str = 'instructional_activitydata',
+              rm_disk: bool = False) -> pd.DataFrame:
+        '''Clean cached EFIA files; keep reported and estimated FTE separate.'''
+        df = CLEANERS[self.subject](activity_dir=activity_dir,
+                                    year_range=self.year_range)
+        if rm_disk:
+            _remove_download_dir(activity_dir)
+        return df
+
+    def run(self,
+            see_progress: bool = False,
+            merge_with_char: bool = False,
+            rm_disk: bool = False) -> pd.DataFrame:
+        '''Download and clean EFIA, optionally attaching Characteristics.'''
+        self.scrape(see_progress=see_progress)
+        df = self.clean(rm_disk=rm_disk)
+        if merge_with_char:
+            char_df = Characteristics(year_range=self.year_range).run(
+                see_progress=see_progress, rm_disk=rm_disk)
+            df = _merge_characteristics(df, char_df)
+        return df
+
+
 class Retention(IPDS):
     '''First-year undergraduate retention from the Fall Enrollment D files.'''
     subject = 'retention'
@@ -568,6 +603,68 @@ class VeteransAid(IPDS):
         '''Download and clean military-benefit data, with optional IC merge.'''
         self.scrape(see_progress=see_progress)
         df = self.clean(rm_disk=rm_disk)
+        if merge_with_char:
+            char_df = Characteristics(year_range=self.year_range).run(
+                see_progress=see_progress, rm_disk=rm_disk)
+            df = _merge_characteristics(df, char_df)
+        return df
+
+
+class HumanResources(IPDS):
+    '''Modern IPEDS staffing, faculty ranks, new hires and salary datasets.'''
+    subject = 'human_resources'
+
+    def __init__(self,
+                 year_range: Optional[Union[Tuple[int,int], List[int], int]] = None):
+        '''Modern HR files, fall/academic-year starting years 2012-2024.'''
+        get_year_iter(self.subject, year_range)
+        super().__init__(year_range)
+        self.variable_dict = HR_VARIABLES
+
+    def get_dataset_vars(self, dataset: str = 'staff') -> Dict[str, str]:
+        '''Variable descriptions limited to the selected HR file family.'''
+        return dataset_vars(dataset)
+
+    def scrape(self, dataset: str = 'staff', see_progress: bool = False) -> None:
+        '''Download only the chosen source family.'''
+        if dataset not in HR_DATASETS:
+            raise ValueError(f'dataset must be one of {sorted(HR_DATASETS)}')
+        scrape_ipeds_data(HR_DATASETS[dataset], self.year_range,
+                          see_progress=see_progress)
+
+    def clean(self,
+              dataset: str = 'staff',
+              category_codes: Optional[List[Union[str, int]]] = None,
+              hr_dir: Optional[str] = None,
+              rm_disk: bool = False) -> pd.DataFrame:
+        '''Clean cached HR records, optionally filtering source category codes.'''
+        if dataset not in HR_DATASETS:
+            raise ValueError(f'dataset must be one of {sorted(HR_DATASETS)}')
+        directory = hr_dir or f'{HR_DATASETS[dataset]}data'
+        df = CLEANERS[self.subject](dataset=dataset,
+                                    hr_dir=directory,
+                                    category_codes=category_codes,
+                                    year_range=self.year_range)
+        if rm_disk:
+            _remove_download_dir(directory)
+        return df
+
+    def run(self,
+            dataset: str = 'staff',
+            category_codes: Optional[List[Union[str, int]]] = None,
+            see_progress: bool = False,
+            merge_with_char: bool = False,
+            rm_disk: bool = False) -> pd.DataFrame:
+        '''Download one modern HR family, clean and optionally join IC.'''
+        if dataset not in HR_DATASETS:
+            raise ValueError(f'dataset must be one of {sorted(HR_DATASETS)}')
+        if category_codes is not None and (
+                not isinstance(category_codes, list) or
+                any(not isinstance(value, (str, int)) for value in category_codes)):
+            raise TypeError('category_codes must be a list of strings or integers')
+        self.scrape(dataset=dataset, see_progress=see_progress)
+        df = self.clean(dataset=dataset, category_codes=category_codes,
+                        rm_disk=rm_disk)
         if merge_with_char:
             char_df = Characteristics(year_range=self.year_range).run(
                 see_progress=see_progress, rm_disk=rm_disk)

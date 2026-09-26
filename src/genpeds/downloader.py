@@ -19,10 +19,12 @@ import requests
 
 SUBJECTS = {
     'characteristics', 'admissions', 'enrollment', 'distance_enrollment',
-    'twelve_month_enrollment', 'retention', 'tuition', 'tuition_program',
+    'twelve_month_enrollment', 'instructional_activity', 'retention', 'tuition', 'tuition_program',
     'student_aid', 'student_aid_net_price', 'veterans_aid', 'completion',
     'completers', 'completers_by_award', 'cip', 'graduation', 'graduation200',
-    'outcome_measures'
+    'outcome_measures', 'human_resources', 'hr_employees',
+    'hr_instructional_staff', 'hr_faculty_ranks', 'hr_new_hires',
+    'hr_instructional_salaries', 'hr_noninstructional_salaries'
 }
 MAX_ZIP_BYTES = 256 * 1024 * 1024
 MAX_EXTRACTED_BYTES = 512 * 1024 * 1024
@@ -36,10 +38,7 @@ def get_year_iter(subject: str,
     '''
     get year iterable based on subject and year input
 
-    :param subject: string identifying which subject data to download. The subjects available are:
-     ['characteristics', 'admissions', 'enrollment', 'distance_enrollment', 'twelve_month_enrollment', 'retention', 'tuition',
-      'tuition_program', 'student_aid', 'veterans_aid', 'completion', 'completers',
-       'completers_by_award', 'cip', 'graduation', 'graduation200', 'outcome_measures']
+    :param subject: configured subject name; see SUBJECTS for accepted source families.
     
     :param year_range: tuple of year integers (indicates a range), iterable of year integers (indicates group of individual years), or single year to pull data from. Retention is available for 2003-2024; other subjects have their own year ranges. Defaults to all available years for a subject.
     '''
@@ -53,7 +52,7 @@ def get_year_iter(subject: str,
         if subject == 'characteristics':
             start, end = 1984, 2025
             iter_range = list(range(start, end + 1))
-        elif subject == 'twelve_month_enrollment':
+        elif subject in ('twelve_month_enrollment', 'instructional_activity'):
             start, end = 2002, 2025
             iter_range = list(range(start, end + 1))
         elif subject == 'distance_enrollment':
@@ -64,6 +63,9 @@ def get_year_iter(subject: str,
             iter_range = list(range(start, end + 1))
         elif subject == 'outcome_measures':
             start, end = 2015, 2024
+            iter_range = list(range(start, end + 1))
+        elif subject == 'human_resources' or subject.startswith('hr_'):
+            start, end = 2012, 2024
             iter_range = list(range(start, end + 1))
         elif subject in ('completion', 'cip'):
             start, end = 1984, 2025
@@ -120,12 +122,17 @@ def get_year_iter(subject: str,
         raise ValueError('Characteristics data is available for years 1984-2025')
     if subject == 'twelve_month_enrollment' and any(year < 2002 or year > 2025 for year in iter_range):
         raise ValueError('12-month enrollment headcounts are available for years 2002-2025')
+    if subject == 'instructional_activity' and any(year < 2002 or year > 2025 for year in iter_range):
+        raise ValueError('12-month instructional activity is available for years 2002-2025')
     if subject == 'distance_enrollment' and any(year < 2012 or year > 2024 for year in iter_range):
         raise ValueError('Fall distance enrollment data is available for years 2012-2024')
     if subject == 'graduation200' and any(year < 2008 or year > 2024 for year in iter_range):
         raise ValueError('GR200 data is available for reporting years 2008-2024')
     if subject == 'outcome_measures' and any(year < 2015 or year > 2024 for year in iter_range):
         raise ValueError('Outcome Measures data is available for reporting years 2015-2024')
+    if (subject == 'human_resources' or subject.startswith('hr_')) and any(
+            year < 2012 or year > 2024 for year in iter_range):
+        raise ValueError('Modern Human Resources files are available for years 2012-2024')
     if subject in ('completion', 'cip') and any(year < 1984 or year > 2025 for year in iter_range):
         raise ValueError('Completion and CIP files are available for years 1984-2025')
     if subject in ('completers', 'completers_by_award') and any(year < 2012 or year > 2025 for year in iter_range):
@@ -249,10 +256,7 @@ def scrape_ipeds_data(subject: str = 'characteristics',
     '''
     downloads NCES IPEDS data on specified years for a defined subject.
     
-    :param subject: string identifying which subject data to download. The subjects available are:
-     ['characteristics', 'admissions', 'enrollment', 'distance_enrollment', 'twelve_month_enrollment', 'retention', 'tuition',
-      'tuition_program', 'student_aid', 'veterans_aid', 'completion', 'completers',
-       'completers_by_award', 'cip', 'graduation', 'graduation200', 'outcome_measures']
+    :param subject: configured subject name; see SUBJECTS for accepted source families.
     
     :param year_range: tuple of year integers (indicates a range), iterable of year integers (indicates group of individual years), or single year to pull data from. Retention is available for 2003-2024; other subjects have their own year ranges. Defaults to all available years for a subject.
 
@@ -269,6 +273,8 @@ def scrape_ipeds_data(subject: str = 'characteristics',
     - :distance_enrollment: fall counts for students in exclusively/some/no distance education courses and locations of exclusively distance students, 2012-2024 (EF*A_DIST).
 
     - :twelve_month_enrollment: unduplicated 12-month student headcounts, ending years 2002-2025 (EFFY files). Separate from the fall enrollment snapshot.
+
+    - :instructional_activity: 12-month credit/contact-or-clock hours and (from 2004) estimated/reported FTE for periods ending 2002-2025 (EFIA files).
 
     - :retention: first-year full-time and part-time undergraduate retention rates and (from 2007) cohort counts. Available for years 2003-2024 in the Fall Enrollment D files.
 
@@ -289,6 +295,8 @@ def scrape_ipeds_data(subject: str = 'characteristics',
     - :graduation200: distinct bachelor and less-than-four-year cohort measures at 100/150/200% of normal time, GR200_08–GR200_24 (2008-2024).
 
     - :outcome_measures: undergraduate 4/6/8-year awards and eight-year enrollment outcomes by entry cohort, 2015-2024 (OM files).
+
+    - :human_resources: staff by occupation/attendance and sex/race, 2012-2024 (S*_OC). Internal hr_* subjects download the other modern HR families selected by HumanResources.run(dataset=...).
     '''
     if not isinstance(subject, str):
         raise TypeError('subject must be a string')

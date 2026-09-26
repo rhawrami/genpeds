@@ -9,6 +9,7 @@ import numpy as np
 import us 
 
 from genpeds.downloader import get_year_iter
+from genpeds.human_resources import clean_human_resources
 
 
 VARIABLE_RENAME = {
@@ -200,6 +201,18 @@ E12_FIELDS = {
     'asian': (None, None, 'efyasiat', 'xefyasit'),
     'pacific_islander': (None, None, 'efynhpit', 'xefynhpt'),
     'two_or_more': (None, None, 'efy2mort', 'xefy2mot')
+}
+
+
+INSTRUCTIONAL_ACTIVITY_FIELDS = {
+    'cdactua': 'ug_credit_hours',
+    'cnactua': 'ug_contact_clock_hours',
+    'cdactga': 'grad_credit_hours',
+    'efteug': 'ug_estimated_fte',
+    'eftegd': 'grad_estimated_fte',
+    'fteug': 'ug_reported_fte',
+    'ftegd': 'grad_reported_fte',
+    'ftedpp': 'professional_practice_reported_fte'
 }
 
 
@@ -711,6 +724,62 @@ def clean_twelve_month_enrollment(enrollment_dir: str = 'twelve_month_enrollment
         raise FileNotFoundError(f'Missing downloaded 12-month enrollment years: {sorted(requested - found)}')
     if not frames:
         raise FileNotFoundError(f'No 12-month enrollment CSV files found in {enrollment_dir}')
+    return pd.concat(frames, ignore_index=True)
+
+
+def clean_instructional_activity(activity_dir: str = 'instructional_activitydata',
+                                 year_range: Optional[Union[Tuple[int,int], List[int], int]] = None) -> pd.DataFrame:
+    '''Return the institutional July–June EFIA hours and FTE series.
+
+    NCES adds estimated/reported FTE in 2004 and professional-practice FTE
+    in 2012. Reported FTE may itself be NCES's estimated fallback when an
+    institution did not supply its own figure; never substitute one for the
+    other or add professional-practice FTE to graduate FTE automatically.
+    '''
+    requested = (set(get_year_iter('instructional_activity', year_range))
+                 if year_range is not None else None)
+    flags = {'x' + source: name + '_status'
+             for source, name in INSTRUCTIONAL_ACTIVITY_FIELDS.items()}
+    frames = []
+    found = set()
+
+    for file in sorted(os.listdir(activity_dir)):
+        match = re.fullmatch(r'instructional_activity_(\d{4})\.csv', file, flags=re.IGNORECASE)
+        if not match:
+            continue
+        year = int(match.group(1))
+        if requested is not None and year not in requested:
+            continue
+        if not 2002 <= year <= 2025:
+            continue
+
+        cols = {'unitid', 'acttype', *INSTRUCTIONAL_ACTIVITY_FIELDS, *flags}
+        df = pd.read_csv(os.path.join(activity_dir, file), dtype=str,
+                         index_col=False, low_memory=False,
+                         usecols=lambda c: c.lower().strip() in cols)
+        df.columns = df.columns.str.lower().str.strip()
+        required = {'unitid', 'cdactua', 'cnactua', 'cdactga'}
+        if not required.issubset(df.columns):
+            raise ValueError(f'{file} is missing EFIA activity fields: {sorted(required - set(df.columns))}')
+        df = df.reindex(columns=sorted(cols))
+        label = 'clock' if year >= 2019 else 'contact'
+        types = {'1': f'{label.title()} hours', '2': 'Credit hours',
+                 '3': f'Both {label} and credit hours', '-2': 'Not applicable'}
+        output = pd.DataFrame({'id': df['unitid'].str.strip(), 'year': year,
+                               'period_start_year': year - 1,
+                               'hour_term': label,
+                               'activity_type_code': df['acttype'].astype('string').str.strip()})
+        output['activity_type'] = output['activity_type_code'].map(types).astype('string')
+        for source, name in INSTRUCTIONAL_ACTIVITY_FIELDS.items():
+            output[name] = pd.to_numeric(df[source], errors='coerce')
+            output[name + '_status'] = df['x' + source].astype('string').str.strip()
+        frames.append(output)
+        found.add(year)
+
+    if requested is not None and requested - found:
+        raise FileNotFoundError(f'Missing downloaded instructional activity years: {sorted(requested - found)}')
+    if not frames:
+        raise FileNotFoundError(f'No EFIA CSV files found in {activity_dir}')
     return pd.concat(frames, ignore_index=True)
 
 
@@ -1434,6 +1503,7 @@ CLEANERS = {
     'enrollment' : clean_enrollment,
     'distance_enrollment' : clean_distance_enrollment,
     'twelve_month_enrollment' : clean_twelve_month_enrollment,
+    'instructional_activity' : clean_instructional_activity,
     'retention' : clean_retention,
     'tuition' : clean_tuition,
     'student_aid' : clean_student_aid,
@@ -1443,5 +1513,6 @@ CLEANERS = {
     'cip' : clean_cip,
     'graduation' : clean_graduation,
     'graduation200' : clean_graduation200,
-    'outcome_measures' : clean_outcome_measures
+    'outcome_measures' : clean_outcome_measures,
+    'human_resources' : clean_human_resources
 }

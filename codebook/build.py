@@ -19,31 +19,40 @@ sys.path.insert(0, str(ROOT / 'src'))
 
 from genpeds.cleaners import (  # noqa: E402
     ADMISSION_CONSIDERATIONS, AID_FIELDS, COMPLETERS_FIELDS, DISTANCE_FIELDS, E12_FIELDS,
-    GR200_FIELDS, GR200_FLAG_EXCEPTIONS, OM_FIELDS, TUITION_FIELDS,
+    GR200_FIELDS, GR200_FLAG_EXCEPTIONS, INSTRUCTIONAL_ACTIVITY_FIELDS,
+    OM_FIELDS, TUITION_FIELDS,
     VARIABLE_RENAME, VETERANS_AID_FIELDS,
+)
+from genpeds.human_resources import (  # noqa: E402
+    HR_DATASETS, HR_FIELDS, HR_VARIABLES, HR_CATEGORY_FIELDS,
 )
 
 
 CONFIG = json.loads((ROOT / 'src/genpeds/cfg.json').read_text(encoding='utf-8'))
+CONFIG['human_resources']['variables'] = HR_VARIABLES
 PUBLIC = {
     'characteristics': 'Characteristics', 'admissions': 'Admissions',
     'enrollment': 'Enrollment', 'distance_enrollment': 'DistanceEnrollment',
     'twelve_month_enrollment': 'TwelveMonthEnrollment',
+    'instructional_activity': 'InstructionalActivity',
     'retention': 'Retention', 'tuition': 'Tuition', 'student_aid': 'StudentAid',
     'veterans_aid': 'VeteransAid', 'completion': 'Completion',
     'completers': 'Completers', 'graduation': 'Graduation',
     'graduation200': 'Graduation200', 'outcome_measures': 'OutcomeMeasures',
+    'human_resources': 'HumanResources',
     'cip': 'Cip',
 }
 SOURCE_TO_API = {**PUBLIC, 'tuition_program': 'Tuition',
                  'student_aid_net_price': 'StudentAid',
                  'completers_by_award': 'Completers'}
+SOURCE_TO_API.update({subject: 'HumanResources' for subject in HR_DATASETS.values()})
 TABLES = {
     'characteristics': 'IC/FA/HD institutional header',
     'admissions': 'IC2001-2013 or ADM2014-2024',
     'enrollment': 'EF fall-enrollment A',
     'distance_enrollment': 'EF fall-enrollment A distance supplement',
     'twelve_month_enrollment': 'EFFY (12-month headcounts)',
+    'instructional_activity': 'EFIA (12-month instructional activity and FTE)',
     'retention': 'EF fall-enrollment D',
     'tuition': 'IC academic-year/program-year; COST1_2024',
     'student_aid': 'SFA; COST2_2024 for 2023-24 net price',
@@ -53,6 +62,7 @@ TABLES = {
     'graduation': 'GR (150% adjusted cohorts)',
     'graduation200': 'GR200_YY (100/150/200% cohorts)',
     'outcome_measures': 'OM annual cohort/status file',
+    'human_resources': 'EAP; S*_OC/IS/SIS/NH; SAL*_IS/NIS (selected dataset)',
     'cip': 'Completions A data dictionary CIPCODE frequencies',
 }
 GRAIN = {
@@ -61,6 +71,7 @@ GRAIN = {
     'enrollment': 'institution × fall year × studentlevel',
     'distance_enrollment': 'institution × fall year × EFDELEV student_level (nested rows overlap)',
     'twelve_month_enrollment': 'institution × period-ending year × student_level',
+    'instructional_activity': 'institution × 12-month period-ending year',
     'retention': 'institution × retention fall year',
     'tuition': 'institution × price starting year × reporter',
     'student_aid': 'institution × aid ending year × reporter',
@@ -70,6 +81,7 @@ GRAIN = {
     'graduation': 'institution × reporting year × selected deglevel/cohort',
     'graduation200': 'institution × reporting year × bachelor or less-than-four-year entering cohort',
     'outcome_measures': 'institution × eight-year status year × entry cohort/Pell subgroup',
+    'human_resources': 'dataset-dependent: institution × year × occupation/staff/tenure/rank code',
     'cip': 'CIP code × dictionary year',
 }
 
@@ -127,6 +139,14 @@ def availability(subject, variable):
         if base in ('source_level_code', 'level_code_system', 'student_level'):
             return '2002-2019 LSTUDY; 2020-2025 EFFYALEV; first_professional only through 2010'
         return '2002-2025; original category definitions can change'
+    if subject == 'instructional_activity':
+        if base == 'professional_practice_reported_fte':
+            return '2012-2025; separately reported professional-practice FTE'
+        if base.endswith('_fte') or base in ('activity_type_code', 'activity_type'):
+            return '2004-2025; missing in 2002-2003'
+        if base in ('ug_contact_clock_hours', 'hour_term'):
+            return '2002-2018 contact; 2019-2025 clock source wording'
+        return '2002-2025; academic/program applicability varies'
     if subject == 'retention':
         if 'inclusions' in base:
             return '2016-2024'
@@ -189,6 +209,26 @@ def availability(subject, variable):
         if base in ('pell_group', 'cohort_type', 'source_cohort_code', 'schema_version'):
             return '2015-2016 initial codes; 2017-2024 expanded cohorts and Pell groups'
         return '2015-2024; entering cohort is year-8'
+    if subject == 'human_resources':
+        if base in ('hire_window_months', 'hire_period_start_year'):
+            return '2012-2017 four-month hires; 2018-2024 twelve-month hires'
+        if base == 'salary_regime':
+            return '2012-2015 weighted months; 2016-2024 explicit months'
+        if base.startswith(('average_months_', 'months_worked_')):
+            return '2012-2017 instructional salary source; absent from 2018+'
+        if (base.startswith(('equated_9_month_', 'instructional_staff_',
+                             'staff_under9_', 'average_salary_'))
+                or (base.startswith('salary_outlay_') and '_month_' in base)):
+            return '2016-2024 instructional salary source only'
+        if base.startswith('staff_') and '_month_' in base:
+            return '2012-2024 instructional salary source only'
+        if base in ('staff_count', 'salary_outlay'):
+            return '2012-2024 noninstructional salary source only; no sex split'
+        families = sorted({dataset for dataset, fields in HR_FIELDS.items()
+                           if base in fields.values()})
+        if families:
+            return f"2012-2024; source dataset(s): {'/'.join(families)}"
+        return '2012-2024 modern HR; category population/coverage depends on dataset'
     if subject == 'cip':
         return '1984-2025; code definitions/versions vary by year'
     raise KeyError(subject)
@@ -217,6 +257,14 @@ def source_fields(subject, variable):
     elif subject == 'outcome_measures' and name in OM_FIELDS:
         fields = [(('X' if status else '') + raw.upper())
                   for output, raw in OM_FIELDS.items() if output == name]
+    elif subject == 'human_resources':
+        fields = [((('X' if status else '') + raw.upper()))
+                  for group in HR_FIELDS.values()
+                  for raw, output in group.items() if output == name]
+    elif subject == 'instructional_activity':
+        fields = [(('X' if status else '') + raw.upper())
+                  for raw, output in INSTRUCTIONAL_ACTIVITY_FIELDS.items()
+                  if output == name]
     elif subject == 'tuition':
         for spec in TUITION_FIELDS.values():
             fields += [v.upper() for raw, (target, flag) in spec.items()
@@ -303,6 +351,11 @@ def source_fields(subject, variable):
             'some_share': ('EFDESOM|EFDETOT', 'some_distance / total_students × 100; zero denominator -> NA'),
             'no_distance_share': ('EFDENON|EFDETOT', 'no_distance / total_students × 100; zero denominator -> NA'),
         },
+        'instructional_activity': {
+            'activity_type_code': ('ACTTYPE', 'raw activity type from 2004; -2 not applicable'),
+            'activity_type': ('ACTTYPE', 'year-aware credit/contact/clock label'),
+            'hour_term': ('CNACTUA|source file year', 'contact through 2018; clock from 2019'),
+        },
         'graduation200': {
             'cohort_type': ('BAREVCT|L4REVCT', 'select the applicable source cohort'),
             'cohort_year': ('source file year', 'year - 8 (bachelor) or year - 4 (less-than-four-year)'),
@@ -318,6 +371,27 @@ def source_fields(subject, variable):
             'entering_year_start': ('source file year', 'year - 8'),
             'entering_year_end': ('source file year', 'year - 7'),
         },
+        'human_resources': {
+            'category_code': ('EAPCAT|STAFFCAT|SISCAT|SNHCAT', 'source dataset-specific category code'),
+            'category_label': ('EAPCAT|STAFFCAT|SISCAT|SNHCAT', 'year-specific label from packaged NCES dictionaries'),
+            'occupation_code': ('OCCUPCAT|SANIN01-14', 'occupation code varies by selected dataset'),
+            'occupation_label': ('OCCUPCAT|SANIN01-14', 'year-specific NCES dictionary label'),
+            'faculty_status_code': ('FACSTAT', 'source faculty/tenure status code'),
+            'faculty_status_label': ('FACSTAT', 'year-specific NCES label'),
+            'ftpt_code': ('FTPT', 'source full-/part-time status code'),
+            'ftpt_label': ('FTPT', 'year-specific NCES label'),
+            'rank_code': ('ARANK', 'rank code 0 is all ranks in staff; 7 is all ranks in salary'),
+            'rank_label': ('ARANK', 'year-specific NCES rank label'),
+            'women_share': ('HRTOTLM|HRTOTLW', 'women / (men + women) × 100; zero denominator -> NA'),
+            'hire_window_months': ('source file year', 'four months through 2017; twelve from 2018'),
+            'hire_period_start_year': ('source file year', 'year through 2017; year - 1 from 2018'),
+            'academic_year_end': ('source file year', 'year + 1 for SAL source files'),
+            'salary_regime': ('source file year', '2012-15 weighted versus 2016+ explicit months'),
+            'staff_count': ('SANIN01-14', 'noninstructional count for the selected occupation code'),
+            'staff_count_status': ('XSANIN01-14', 'NCES noninstructional count flags'),
+            'salary_outlay': ('SANIT01-14', 'noninstructional annual outlay for selected occupation'),
+            'salary_outlay_status': ('XSANIT01-14', 'NCES noninstructional outlay flags'),
+        },
     }
     if name in calculations.get(subject, {}):
         raw, method = calculations[subject][name]
@@ -332,6 +406,8 @@ def source_fields(subject, variable):
         raw = [source.upper() for source, output in VARIABLE_RENAME['admissions'].items()
                if output == ADMISSION_CONSIDERATIONS[name]]
         fields, method = raw, 'year-aware label for raw ADMCON code; see codes.csv'
+    if subject == 'human_resources' and status and name in ('staff_count', 'salary_outlay'):
+        fields = ['XSANIN01-14' if name == 'staff_count' else 'XSANIT01-14']
     if subject == 'graduation':
         suffix = name.removesuffix('_graduated').removeprefix('gradrate_')
         if name.endswith('_graduated') or name.startswith('gradrate_'):
@@ -372,6 +448,23 @@ def units(subject, variable):
         return 'year'
     if variable == 'id':
         return 'UNITID string'
+    if subject == 'human_resources':
+        if variable in ('year', 'hire_period_start_year', 'academic_year_end'):
+            return 'calendar year'
+        if variable.startswith(('average_months_', 'months_worked_')) or variable == 'hire_window_months':
+            return 'months'
+        if ('salary' in variable or 'outlay' in variable) and variable != 'salary_regime':
+            return 'nominal dollars (institution aggregates or rank average)'
+        if variable in ('women_share',):
+            return 'percent (0-100)'
+        if any(variable == output for fields in HR_FIELDS.values()
+               for output in fields.values()) or variable == 'staff_count':
+            return 'people'
+    if subject == 'instructional_activity':
+        if variable.endswith('_hours'):
+            return 'instructional credit/contact/clock hours (not unique students)'
+        if variable.endswith('_fte'):
+            return 'full-time-equivalent students (estimated or reported)'
     if variable in ('longitude', 'latitude'):
         return 'decimal degrees (string in current API)'
     if variable in ('cip', 'largest_program_cip'):

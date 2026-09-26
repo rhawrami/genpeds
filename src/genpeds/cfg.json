@@ -339,6 +339,44 @@
             "two_or_more_status": "NCES reporting/imputation status for two_or_more; missing before the field exists."
         }
     },
+    "instructional_activity": {
+        "description": "IPEDS 12-month instructional activity and FTE for July-June reporting periods ending 2002-2025; source EFIA files. Estimated and reported FTE are distinct fields.",
+        "years_available": [2002, 2025],
+        "endpoints": {
+            "2002": "EFIA2002", "2003": "EFIA2003", "2004": "EFIA2004",
+            "2005": "EFIA2005", "2006": "EFIA2006", "2007": "EFIA2007",
+            "2008": "EFIA2008", "2009": "EFIA2009", "2010": "EFIA2010",
+            "2011": "EFIA2011", "2012": "EFIA2012", "2013": "EFIA2013",
+            "2014": "EFIA2014", "2015": "EFIA2015", "2016": "EFIA2016",
+            "2017": "EFIA2017", "2018": "EFIA2018", "2019": "EFIA2019",
+            "2020": "EFIA2020", "2021": "EFIA2021", "2022": "EFIA2022",
+            "2023": "EFIA2023", "2024": "EFIA2024", "2025": "EFIA2025"
+        },
+        "variables": {
+            "id": "Institutional UNITID identifier.",
+            "year": "Ending year of the July 1-June 30 instructional-activity reporting period; EFIA2025 covers 2024-25.",
+            "period_start_year": "Starting year of the July-June reporting period (year minus one).",
+            "hour_term": "'contact' through EFIA2018 and 'clock' from EFIA2019; the CNACTUA source description changes terminology.",
+            "activity_type_code": "Raw ACTTYPE reporting category: 1 contact/clock, 2 credit, 3 both, -2 not applicable; present from 2004.",
+            "activity_type": "Year-aware ACTTYPE label; no source ACTTYPE exists in 2002-03.",
+            "ug_credit_hours": "Undergraduate credit-hour instructional activity (CDACTUA); credit hours summed over enrolled course-takers, not unique students.",
+            "ug_contact_clock_hours": "Undergraduate occupational-program contact hours (through 2018) / clock hours (from 2019), CNACTUA; not credit hours.",
+            "grad_credit_hours": "Graduate credit-hour instructional activity (CDACTGA).",
+            "ug_estimated_fte": "NCES-estimated undergraduate full-time equivalent from instructional activity (EFTEUG), available from 2004.",
+            "grad_estimated_fte": "NCES-estimated graduate full-time equivalent (EFTEGD), available from 2004.",
+            "ug_reported_fte": "Reported undergraduate FTE (FTEUG), available from 2004; when the institution did not supply FTE, NCES may set it equal to estimated FTE.",
+            "grad_reported_fte": "Reported graduate FTE (FTEGD), available from 2004; may fall back to NCES-estimated FTE.",
+            "professional_practice_reported_fte": "Separately reported doctoral professional-practice FTE (FTEDPP), available from 2012; do not automatically add to graduate FTE.",
+            "ug_credit_hours_status": "NCES source reporting/imputation flag for CDACTUA (XCDACTUA).",
+            "ug_contact_clock_hours_status": "NCES source reporting/imputation flag for CNACTUA (XCNACTUA).",
+            "grad_credit_hours_status": "NCES source reporting/imputation flag for CDACTGA (XCDACTGA).",
+            "ug_estimated_fte_status": "NCES source reporting/imputation flag for EFTEUG (XEFTEUG); missing before 2004.",
+            "grad_estimated_fte_status": "NCES source reporting/imputation flag for EFTEGD (XEFTEGD); missing before 2004.",
+            "ug_reported_fte_status": "NCES source reporting/imputation flag for FTEUG (XFTEUG); missing before 2004.",
+            "grad_reported_fte_status": "NCES source reporting/imputation flag for FTEGD (XFTEGD); missing before 2004.",
+            "professional_practice_reported_fte_status": "NCES source reporting/imputation flag for FTEDPP (XFTEDPP); missing before 2012."
+        }
+    },
     "tuition": {
         "description": "Published undergraduate tuition and required fees, 2000-2024. Academic-year and program-year reporters are separate; 2024 moves from Institutional Characteristics to Cost I.",
         "years_available": [2000, 2024],
@@ -529,6 +567,88 @@
             "grad_dod_count_status": "NCES reporting/imputation flag for grad_dod_count.",
             "grad_dod_total_status": "NCES reporting/imputation flag for grad_dod_total.",
             "grad_dod_avg_status": "NCES reporting/imputation flag for grad_dod_avg."
+        }
+    },
+    "human_resources": {
+        "description": "Modern IPEDS Human Resources headcounts, faculty rank/tenure, new hires, and instructional/noninstructional salary outlays; 2012-2024. Select one HR dataset per run; row categories overlap and salary rules change.",
+        "years_available": [2012, 2024],
+        "endpoints": {
+            "2012": "S2012_OC", "2013": "S2013_OC", "2014": "S2014_OC",
+            "2015": "S2015_OC", "2016": "S2016_OC", "2017": "S2017_OC",
+            "2018": "S2018_OC", "2019": "S2019_OC", "2020": "S2020_OC",
+            "2021": "S2021_OC", "2022": "S2022_OC", "2023": "S2023_OC",
+            "2024": "S2024_OC"
+        },
+        "variables": {}
+    },
+    "hr_employees": {
+        "description": "HR employee counts by occupation and faculty status (EAP).",
+        "years_available": [2012, 2024],
+        "endpoints": {
+            "2012": "EAP2012", "2013": "EAP2013", "2014": "EAP2014",
+            "2015": "EAP2015", "2016": "EAP2016", "2017": "EAP2017",
+            "2018": "EAP2018", "2019": "EAP2019", "2020": "EAP2020",
+            "2021": "EAP2021", "2022": "EAP2022", "2023": "EAP2023",
+            "2024": "EAP2024"
+        }
+    },
+    "hr_instructional_staff": {
+        "description": "HR full-time instructional staff by tenure/rank/race/sex (S*_IS).",
+        "years_available": [2012, 2024],
+        "endpoints": {
+            "2012": "S2012_IS", "2013": "S2013_IS", "2014": "S2014_IS",
+            "2015": "S2015_IS", "2016": "S2016_IS", "2017": "S2017_IS",
+            "2018": "S2018_IS", "2019": "S2019_IS", "2020": "S2020_IS",
+            "2021": "S2021_IS", "2022": "S2022_IS", "2023": "S2023_IS",
+            "2024": "S2024_IS"
+        }
+    },
+    "hr_faculty_ranks": {
+        "description": "HR faculty-status/rank counts without sex breakdown (S*_SIS).",
+        "years_available": [2012, 2024],
+        "endpoints": {
+            "2012": "S2012_SIS", "2013": "S2013_SIS", "2014": "S2014_SIS",
+            "2015": "S2015_SIS", "2016": "S2016_SIS", "2017": "S2017_SIS",
+            "2018": "S2018_SIS", "2019": "S2019_SIS", "2020": "S2020_SIS",
+            "2021": "S2021_SIS", "2022": "S2022_SIS", "2023": "S2023_SIS",
+            "2024": "S2024_SIS"
+        }
+    },
+    "hr_new_hires": {
+        "description": "HR full-time new hires by occupation/faculty status/race/sex (S*_NH).",
+        "years_available": [2012, 2024],
+        "endpoints": {
+            "2012": "S2012_NH", "2013": "S2013_NH", "2014": "S2014_NH",
+            "2015": "S2015_NH", "2016": "S2016_NH", "2017": "S2017_NH",
+            "2018": "S2018_NH", "2019": "S2019_NH", "2020": "S2020_NH",
+            "2021": "S2021_NH", "2022": "S2022_NH", "2023": "S2023_NH",
+            "2024": "S2024_NH"
+        }
+    },
+    "hr_instructional_salaries": {
+        "description": "HR instructional counts and annual salary outlays by rank/sex; 2016+ explicit month/9-month-equivalent pay (SAL*_IS).",
+        "years_available": [2012, 2024],
+        "endpoints": {
+            "2012": "SAL2012_IS", "2013": "SAL2013_IS",
+            "2014": "SAL2014_IS", "2015": "SAL2015_IS",
+            "2016": "SAL2016_IS", "2017": "SAL2017_IS",
+            "2018": "SAL2018_IS", "2019": "SAL2019_IS",
+            "2020": "SAL2020_IS", "2021": "SAL2021_IS",
+            "2022": "SAL2022_IS", "2023": "SAL2023_IS",
+            "2024": "SAL2024_IS"
+        }
+    },
+    "hr_noninstructional_salaries": {
+        "description": "HR noninstructional full-time staff counts and annual outlays by occupation; not sex-disaggregated (SAL*_NIS).",
+        "years_available": [2012, 2024],
+        "endpoints": {
+            "2012": "SAL2012_NIS", "2013": "SAL2013_NIS",
+            "2014": "SAL2014_NIS", "2015": "SAL2015_NIS",
+            "2016": "SAL2016_NIS", "2017": "SAL2017_NIS",
+            "2018": "SAL2018_NIS", "2019": "SAL2019_NIS",
+            "2020": "SAL2020_NIS", "2021": "SAL2021_NIS",
+            "2022": "SAL2022_NIS", "2023": "SAL2023_NIS",
+            "2024": "SAL2024_NIS"
         }
     },
     "retention": {

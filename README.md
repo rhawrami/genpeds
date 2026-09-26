@@ -14,6 +14,8 @@ For the complete output-variable inventory, source mappings, and year-specific i
 Characteristics, 12-month enrollment, Completion and Completers include the released 2025 files; most other classes currently end in 2024.
 Tuition, StudentAid, and VeteransAid now provide institutional price and aid data.
 Admissions now retains applicant/admit/enrollment breakdowns and year-specific admissions policies; OutcomeMeasures adds 4/6/8-year student-success outcomes.
+InstructionalActivity now complements 12-month enrollment headcounts with hours and FTE through 2025.
+HumanResources now covers modern staffing, faculty, new-hire and salary tables through 2024.
 
 ## Usage
 
@@ -107,7 +109,7 @@ IPEDS [covers](https://nces.ed.gov/ipeds/about-ipeds) eight main subjects:
 7. Student Financial Aid
 8. Institutional Resources including Human Resources, Finance, and Academic Libraries
 
-`genpeds` supports selected data from the first seven subject areas. Finance, Human Resources, and Academic Libraries remain to be added:
+`genpeds` supports selected data from the first seven subject areas and Human Resources within institutional resources. Finance and Academic Libraries remain to be added:
 
 - **Characteristics** (directory, geography and institutional classification; available 1984–2025)
 ```python
@@ -181,6 +183,19 @@ all_levels_df = annual.run(student_level='all')
 `year=2025` means **July 2024 through June 2025**; this unduplicated count is not the fall enrollment snapshot. `student_level` accepts `'undergrad'` (default), `'grad'`, `'total'`, `'all'`, or `'first_professional'` for years 2002–2010 only. NCES reported first-professional students **separately** from graduate students through 2010 and combined them into graduate reporting thereafter; do not infer a consistent historical graduate series without accounting for that break. In `'all'`, the `total` row overlaps the other levels and must not be summed with them. Through 2019 the cleaner selects `LSTUDY` rows; from 2020 it selects `EFFYALEV` codes 1, 2, and 12, excluding nested undergraduate detail rows. `source_level_code` and `level_code_system` record which coding scheme was used.
 
 The output includes reported total, men/women and race/ethnicity headcounts with matching `_status` flags. The older combined Asian/Pacific Islander category (`asian_pacific`) is available in 2002–2007; `asian` and `pacific_islander` are distinct from 2008. Race definitions should be compared with each year's NCES dictionary. `TwelveMonthEnrollment(2025).run(merge_with_char=True)` joins the 2025 Characteristics snapshot by UNITID and year; its survey snapshot and the enrollment reporting period refer to different time windows. Downloads are cached in `twelve_month_enrollmentdata/` unless `rm_disk=True`.
+- **InstructionalActivity** (12-month instructional hours and full-time-equivalent enrollment; periods ending 2002–2025)
+```python
+from genpeds import InstructionalActivity, TwelveMonthEnrollment
+
+activity = InstructionalActivity(2025).run(merge_with_char=True)
+undergrads = TwelveMonthEnrollment(2025).run(student_level='undergrad')
+comparison = activity.merge(undergrads[['id', 'year', 'total_students']],
+                            on=['id', 'year'])
+```
+
+`year=2025` covers July 2024–June 2025, as in `TwelveMonthEnrollment`, but **instructional credit/clock hours and FTE are not unique student headcounts**. EFIA has one row per institution/year: `ug_credit_hours`, `ug_contact_clock_hours`, and `grad_credit_hours` are available from 2002. The source calls `CNACTUA` *contact hours* through 2018 and *clock hours* from 2019; `hour_term` and the raw `activity_type_code` (1 contact/clock, 2 credit, 3 both, -2 not applicable) preserve that distinction. Do not add credit hours to contact/clock hours.
+
+`ug_estimated_fte`/`grad_estimated_fte` and `ug_reported_fte`/`grad_reported_fte` appear from 2004; `professional_practice_reported_fte` starts in 2012. Early unavailable measures stay missing. **Reported FTE is not necessarily an independent institution calculation**: NCES documents a fallback to estimated FTE when an institution does not supply its own figure. We keep the reported and estimated columns and their individual `_status` flags rather than combining them. This class uses `EFIA*` files and caches downloads in `instructional_activitydata/`; `merge_with_char` and `rm_disk` follow the other subject classes.
 - **Retention** (first-year undergraduate retention for full-time and part-time entering students; available 2003–2024)
 ```python
 from genpeds import Retention
@@ -248,6 +263,36 @@ benefits_df = VeteransAid((2014, 2024)).run(merge_with_char=True)
 ```
 
 This separate class keeps institutions with **graduate-only** GI Bill or DoD Tuition Assistance recipients that are absent from the main SFA file. It provides recipient counts, total dollars, averages and `_status` flags by undergraduate/graduate level and benefit program. Award amounts represent benefits known to the institution, not every benefit a student may have received. Data are cached in `veterans_aiddata/`. For both aid classes, merging Characteristics uses the aid period's ending year as `year`; institutional characteristics are a snapshot from that year rather than the same aid-period measure.
+- **HumanResources** (modern IPEDS staffing and salary files, 2012–2024)
+```python
+from genpeds import HumanResources
+
+hr = HumanResources(2024)
+staff = hr.run(dataset='staff', category_codes=['1100'],
+               merge_with_char=True)  # grand-total staff row per school
+professor_pay = hr.run(dataset='instructional_salaries',
+                       category_codes=['1'])  # professors only
+professor_pay[['id', 'rank_label', 'equated_9_month_salary_men',
+               'equated_9_month_salary_women']]
+
+hr.get_dataset_vars('instructional_salaries')  # variables for this file family
+```
+
+`dataset` selects **one** source family and row grain:
+
+| `dataset` | Source | Contents |
+| --- | --- | --- |
+| `'staff'` (default) | `S*_OC` | Occupational/FT/PT counts by sex and race/ethnicity. |
+| `'employees'` | `EAP*` | Employee counts by occupation/faculty status, FT/PT and medical-school status. |
+| `'instructional_staff'` | `S*_IS` | Full-time instructional faculty by tenure/faculty status, rank, sex and race/ethnicity. |
+| `'faculty_ranks'` | `S*_SIS` | Faculty-status/rank totals; **no sex breakdown** in this table. |
+| `'new_hires'` | `S*_NH` | Full-time hires by occupation, faculty status, sex and race/ethnicity. |
+| `'instructional_salaries'` | `SAL*_IS` | Instructional counts and salary outlays by rank/sex, contract months and available average salaries. |
+| `'noninstructional_salaries'` | `SAL*_NIS` | Full-time noninstructional counts and annual salary outlays by occupation; **no sex breakdown**. |
+
+The full HR cleaner preserves year-specific `*_code` **and** NCES dictionary labels for categories; [`codebook/hr_codes.csv`](codebook/hr_codes.csv) lists their definitions. `category_codes` filters the dataset's primary code (`STAFFCAT`, `EAPCAT`, `SISCAT`, `FACSTAT`, `SNHCAT`, `ARANK`, or `01`–`14` for noninstructional occupations). **Totals and detail categories overlap**, so don't sum every row for a school. `get_available_vars()` is the union across datasets; `get_dataset_vars(dataset)` describes columns actually returned by one selection. Count and salary fields retain NCES `_status` flags. All datasets support `see_progress`, `merge_with_char`, and `rm_disk`.
+
+`year=2024` describes **fall 2024 staffing**, but salary fields cover **academic year 2024–25**. The source's nine-month-equivalent average (`equated_9_month_salary_*`) starts in **2016** and is **missing in 2012–15**, when the salary collection used different months-worked information. New-hire counts cover **July–October through 2017** versus **the preceding November–October from 2018**; `hire_window_months` and `hire_period_start_year` expose the boundary. `HumanResources` starts at the modern **2012 occupational redesign**: earlier IPEDS salary/staff files exist, but their categories and pay conventions are not silently joined into this series. These are institutional counts, annual salary outlays and rank/contract averages—**not individual salaries or medians**. See the [harmonization guide](codebook/harmonization.md#human-resources) for the reporting populations and comparability notes.
 - **Completion** (awards by CIP field, level and first/second major, 1984–2025)
 ```python
 from genpeds import scrape_ipeds_data, Completion

@@ -54,6 +54,12 @@ TwelveMonthEnrollment,LSTUDY,2002-2019,999,total,Institution-wide generated tota
 TwelveMonthEnrollment,EFFYALEV,2020-2025,1,total,Institution-wide total,EFFY2025,Overlaps level rows
 TwelveMonthEnrollment,EFFYALEV,2020-2025,2,undergrad,All undergraduates total,EFFY2025,Do not sum nested undergraduate detail codes
 TwelveMonthEnrollment,EFFYALEV,2020-2025,12,grad,All graduates total,EFFY2025,
+InstructionalActivity,ACTTYPE,2004-2018,1,Contact hours,Institution reports occupational-program contact hour activity,EFIA2004,Source CNACTUA wording changes later
+InstructionalActivity,ACTTYPE,2019-2025,1,Clock hours,Institution reports occupational-program clock hour activity,EFIA2025,Raw code unchanged but dictionary wording changed
+InstructionalActivity,ACTTYPE,2004-2025,2,Credit hours,Institution reports credit hour activity,EFIA2004,
+InstructionalActivity,ACTTYPE,2004-2018,3,Both contact and credit hours,Institution reports both source hour types,EFIA2012,Do not add unlike units
+InstructionalActivity,ACTTYPE,2019-2025,3,Both clock and credit hours,Institution reports both source hour types,EFIA2025,Do not add unlike units
+InstructionalActivity,ACTTYPE,2004-2025,-2,Not applicable,Institution has no applicable activity type,EFIA2025,Source raw code retained
 Admissions,ADMCON1-8,2001-2015,1,Required,Required for admissions consideration,ADM2014,Other year-specific special codes remain in consider_*_code
 Admissions,ADMCON1-8,2001-2015,2,Recommended,Recommended for admissions consideration,ADM2014,
 Admissions,ADMCON1-8,2001-2015,3,Neither required nor recommended,Neither required nor recommended,ADM2014,Not the 2022+ test-blind definition
@@ -110,3 +116,16 @@ OutcomeMeasures,OMCHRT,2017-2024,51,total|pell,Overall Pell group,OM2017,Overlap
 OutcomeMeasures,OMCHRT,2017-2024,52,total|non_pell,Overall non-Pell group,OM2017,Overlaps all cohort-specific non-Pell groups
 OutcomeMeasures,OMFLAG,2015,0,No issues,NCES reports no OM2015 data inconsistency,OM2015,Not present in later OM files
 OutcomeMeasures,OMFLAG,2015,1,Data inconsistencies,NCES flags an OM2015 data inconsistency,OM2015,Preserve source row and flag rather than discarding
+HumanResources,FTPT,2012-2024,1,All staff,All staff attendance total,S2024_OC,Overlaps full-/part-time detail rows
+HumanResources,FTPT,2012-2024,2,Full-time,Full-time employees,S2024_OC,
+HumanResources,FTPT,2012-2024,3,Part-time,Part-time employees,S2024_OC,
+HumanResources,FTPT,2012-2024,4,Graduate Assistants,Graduate assistants as separate category,S2024_OC,Not students in Enrollment
+HumanResources,STAFFCAT,2012-2024,1100,Grand Total,Overlapping all-staff total,S2024_OC,Do not sum with staff categories 1200-1400
+HumanResources,SISCAT,2012-2024,1,All full-time instructional staff,Overlapping total instructional faculty,S2024_IS,Do not sum with rank/tenure categories
+HumanResources,FACSTAT,2012-2024,20,"With faculty status, tenured",Tenured faculty within this HR row group,S2024_IS,
+HumanResources,ARANK,2012-2024,0,All ranks,All ranks in S*_IS instructional counts,S2024_IS,Not the salary ARANK total
+HumanResources,ARANK,2012-2024,1,Professor,Professors in S*_IS and SAL*_IS,SAL2024_IS,Compare equal ranks within a matching population
+HumanResources,ARANK,2012-2024,7,All instructional staff total,All ranks in SAL*_IS instructional salaries,SAL2024_IS,Overlaps professor/associate/assistant detail rows
+HumanResources,SNHCAT,2012-2024,10000,All full-time new hires,Overlapping new-hire total,S2024_NH,Reporting window changes from 2018
+HumanResources,SANIN##|SANIT##,2012-2024,01,Full-time non-instructional staff,Overlapping full-time noninstructional total,SAL2024_NIS,No source sex breakdown
+HumanResources,SANIN##|SANIT##,2012-2024,05,Management,Management occupation group,SAL2024_NIS,Noninstructional salary outlays are not individual salaries
