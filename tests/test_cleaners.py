@@ -1,137 +1,80 @@
+"""Optional independent real-file smoke checks for the older subject cleaners.
+
+The detailed transformation/edge-case tests for these subjects use small
+local fixtures elsewhere in the suite. These checks use one NCES year each.
+"""
+
 import os
-import glob
-import shutil
-import json
-from pathlib import Path
 
 import pandas as pd
 import pytest
 
+from genpeds import Cip, Enrollment, Graduation, scrape_ipeds_data
 from genpeds.cleaners import CLEANERS
-from genpeds import scrape_ipeds_data
 
 
-def get_cfg() -> dict:
-    endpoint_path = Path('src') / 'genpeds' / 'cfg.json'
-    with open(endpoint_path, 'r') as cfgjf:
-        cfg = json.load(cfgjf)
-    return cfg
+def test_historical_enrollment_uses_year_specific_level_rows(tmp_path):
+    directory = tmp_path / 'enrollmentdata'
+    directory.mkdir()
+    pd.DataFrame({'UNITID': ['100001'] * 3, 'LINE': [1, 15, 11],
+                  'EFRACE15': [10, 2, 4], 'EFRACE16': [20, 3, 6]}).to_csv(
+        directory / 'enrollment_1985.csv', index=False)
+    pd.DataFrame({'UNITID': ['100001'] * 3, 'LINE': [8, 22, 14],
+                  'EFRACE15': [20, 5, 8], 'EFRACE16': [30, 5, 10]}).to_csv(
+        directory / 'enrollment_1986.csv', index=False)
+    undergraduate = Enrollment((1985, 1986)).clean(enroll_dir=str(directory))
+    graduate = Enrollment((1985, 1986)).clean(student_level='grad', enroll_dir=str(directory))
+    assert undergraduate['totmen'].tolist() == [12, 25]
+    assert graduate['totmen'].tolist() == [4, 8]
+    assert undergraduate.loc[0, 'totmen_share'] == 12 / 35 * 100
 
-def download_data_for_test():
-    '''downloads data for test, assuming not already downloaded'''
-    downloads = [
-        ('characteristics', [2000,2010,2020]),
-        ('admissions', (2001,2005)),
-        ('enrollment', (1985,1990)),
-        ('completion', [2002,2022,2023]),
-        ('cip', [2002,2022,2023]),
-        ('graduation', (2003,2008))
-    ]
-    for sbjct, yrs in downloads:
-        if os.path.exists(f'{sbjct}data'):
-            if isinstance(yrs, tuple):
-                start,end = yrs
-                iter_range = range(start, end + 1)
-            else:
-                iter_range = yrs
-            for yr in iter_range:
-                pattern = os.path.join(f'{sbjct}data', f'{sbjct}_{yr}.*')
-                matches = glob.glob(pattern)
-                if not matches:
-                    scrape_ipeds_data(subject=sbjct, year_range=yr, see_progress=False)
-                else:
-                    continue
-        else:
-            scrape_ipeds_data(subject=sbjct, year_range=yrs, see_progress=False)
 
-# some subjects take no arguments (other than directory path)
-# test these together
-@pytest.mark.parametrize('subject', [
-    'characteristics',
-    'admissions',
-    'cip'
+def test_graduation_uses_adjusted_cohort_not_sum_of_status_rows(tmp_path):
+    directory = tmp_path / 'graduationdata'
+    directory.mkdir()
+    pd.DataFrame({
+        'UNITID': ['100001', '100001', '100001'],
+        'SECTION': [2, 2, 2], 'CHRTSTAT': [12, 12, 12],
+        'GRTYPE': [8, 9, 10], 'GRTOTLM': [100, 80, 999],
+        'GRTOTLW': [120, 90, 999],
+        'GRWHITM': [60, 48, 999], 'GRWHITW': [70, 49, 999],
+        'GRBKAAM': [20, 16, 999], 'GRBKAAW': [20, 16, 999],
+        'GRHISPM': [10, 8, 999], 'GRHISPW': [15, 12, 999],
+        'GRASIAM': [10, 8, 999], 'GRASIAW': [15, 12, 999],
+    }).to_csv(directory / 'graduation_2023.csv', index=False)
+    row = Graduation(2023).clean(grad_dir=str(directory)).iloc[0]
+    assert row.totmen == 100 and row.totmen_graduated == 80
+    assert row.gradrate_totmen == 80 and row.gradrate_totwomen == 75
+
+
+def test_cip_dictionary_labels_are_year_specific(tmp_path):
+    directory = tmp_path / 'cipdata'
+    directory.mkdir()
+    with pd.ExcelWriter(directory / 'cip_2023.xlsx') as book:
+        pd.DataFrame({'varname': ['CIPCODE', 'CIPCODE', 'AWLEVEL'],
+                      'codevalue': ['40.0801', '01.0101', '5'],
+                      'valuelabel': ['Physics, General', 'Agricultural Business', 'Bachelor']}).to_excel(
+            book, sheet_name='Frequencies', index=False)
+    result = Cip(2023).clean(cip_dir=str(directory))
+    assert result.loc[result.cip.eq('40.0801'), 'cip_description'].item() == 'Physics, General'
+    assert set(result.year) == {2023} and len(result) == 2
+
+
+@pytest.mark.skipif(os.environ.get('GENPEDS_LIVE_TESTS') != '1',
+                    reason='Set GENPEDS_LIVE_TESTS=1 for NCES live tests')
+@pytest.mark.parametrize('subject,kwargs,expected', [
+    ('characteristics', {'characteristics_dir': 'characteristicsdata'}, 'name'),
+    ('admissions', {'admissions_dir': 'admissionsdata'}, 'tot_applied'),
+    ('enrollment', {'enrollment_dir': 'enrollmentdata', 'student_level': 'undergrad'}, 'totmen'),
+    ('completion', {'completion_dir': 'completiondata', 'level': 'bach'}, 'totmen'),
+    ('graduation', {'graduation_dir': 'graduationdata', 'deg_level': 'bach'}, 'gradrate_totmen'),
+    ('cip', {'cip_codes_dir': 'cipdata'}, 'cip_description'),
 ])
-def test_basic_cleaners(subject):
-    '''test cleaner functions that take no arguments'''
-    download_data_for_test() # scrape data if needed
-
-    subject_cleaner = CLEANERS[subject] # subject-specific cleaner function
-    subject_var_dict = get_cfg()[subject]['variables'].keys() # expected variables returned
-
-    try:
-        df = subject_cleaner()
-        assert isinstance(df, pd.DataFrame), f'{subject} dataframe not returned.' # check that Pandas DataFrame is returned
-
-        for col in df.columns:
-            assert col in subject_var_dict # check if attributes are in expected attributes
-        shutil.rmtree(f'{subject}data')
-    finally:
-        pass
-
-# test enrollment, with variable arguments
-@pytest.mark.parametrize('lev', [
-    'undergrad',
-    'grad'
-])
-def test_enrollment_cleaner(lev):
-    '''test enrollment cleaning function'''
-    download_data_for_test() # scrape data if needed
-
-    subject_cleaner = CLEANERS['enrollment'] # enrollment cleaner function
-    subject_var_dict = get_cfg()['enrollment']['variables'].keys() # expected variables returned
-
-    try:
-        df = subject_cleaner(student_level=lev) # tries 'undergrad' and 'grad'
-        assert isinstance(df, pd.DataFrame), f'Enrollment dataframe not returned.' # check that Pandas DataFrame is returned
-
-        for col in df.columns:
-            assert col in subject_var_dict # check if attributes are in expected attributes
-        shutil.rmtree(f'enrollmentdata')
-    finally:
-        pass
-
-# test completion
-@pytest.mark.parametrize('lev', [
-    'assc', 
-    'bach', 
-    'mast', 
-    'doct'
-])
-def test_completion_cleaner(lev):
-    '''test completion cleaning function'''
-    download_data_for_test() # scrape data if needed
-
-    subject_cleaner = CLEANERS['completion'] # completion cleaner function
-    subject_var_dict = get_cfg()['completion']['variables'].keys() # expected variables returned
-
-    try:
-        df = subject_cleaner(level=lev) # tries 'assc', 'bach', 'mast', 'doct'
-        assert isinstance(df, pd.DataFrame), f'Completion dataframe not returned.' # check that Pandas DataFrame is returned
-
-        for col in df.columns:
-            assert col in subject_var_dict # check if attributes are in expected attributes
-        shutil.rmtree(f'completiondata')
-    finally:
-        pass
-
-# test graduation
-@pytest.mark.parametrize('lev', [
-    'assc', 
-    'bach'
-])
-def test_graduation_cleaner(lev):
-    '''test graduation cleaning function'''
-    download_data_for_test() # scrape data if needed
-
-    subject_cleaner = CLEANERS['graduation'] # graduation cleaner function
-    subject_var_dict = get_cfg()['graduation']['variables'].keys() # expected variables returned
-
-    try:
-        df = subject_cleaner(deg_level=lev) # tries 'undergrad' and 'grad'
-        assert isinstance(df, pd.DataFrame), f'Graduation dataframe not returned.' # check that Pandas DataFrame is returned
-
-        for col in df.columns:
-            assert col in subject_var_dict # check if attributes are in expected attributes
-        shutil.rmtree(f'graduationdata')
-    finally:
-        pass
+def test_one_year_live_cleaner(tmp_path, monkeypatch, subject, kwargs, expected):
+    monkeypatch.chdir(tmp_path)
+    scrape_ipeds_data(subject, 2023, see_progress=False)
+    df = CLEANERS[subject](**kwargs, year_range=2023)
+    assert not df.empty
+    assert df['year'].eq(2023).all()
+    assert expected in df and df[expected].notna().any()
+    assert (tmp_path / f'{subject}data').is_dir()

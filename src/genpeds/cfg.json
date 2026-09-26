@@ -609,6 +609,17 @@
             "2022": "F2122_F3", "2023": "F2223_F3", "2024": "F2324_F3"
         }
     },
+    "academic_libraries": {
+        "description": "Annual Academic Libraries collections, services, FTE staffing and expenditures for fiscal years 2014-2024. Collection ended with 2024-25; source measures and the $100k spending screen change over time.",
+        "years_available": [2014, 2024],
+        "endpoints": {
+            "2014": "AL2014", "2015": "AL2015", "2016": "AL2016",
+            "2017": "AL2017", "2018": "AL2018", "2019": "AL2019",
+            "2020": "AL2020", "2021": "AL2021", "2022": "AL2022",
+            "2023": "AL2023", "2024": "AL2024"
+        },
+        "variables": {}
+    },
     "human_resources": {
         "description": "Modern IPEDS Human Resources headcounts, faculty rank/tenure, new hires, and instructional/noninstructional salary outlays; 2012-2024. Select one HR dataset per run; row categories overlap and salary rules change.",
         "years_available": [2012, 2024],

@@ -132,3 +132,11 @@ HumanResources,SANIN##|SANIT##,2012-2024,05,Management,Management occupation gro
 Finance,source file form,2004-2024,F1A,f1a,Public institutions reporting under GASB,F2324_F1A,Some public institutions instead use FASB F2
 Finance,source file form,2004-2024,F2,f2,Private nonprofit and some public institutions reporting under FASB,F2324_F2,Not synonymous with Characteristics CONTROL=2
 Finance,source file form,2004-2024,F3,f3,Private for-profit institutions reporting under FASB,F2324_F3,Statement and functional expense totals can differ
+AcademicLibraries,LEXP100K,2019-2024,1,yes,Annual library spending at least 100000 dollars,AL2024,Expense detail generally available
+AcademicLibraries,LEXP100K,2019-2024,2,no,Annual library spending below 100000 dollars,AL2024,Expense detail not applicable rather than zero
+AcademicLibraries,LCOLELYN,2014-2024,1,yes,Library collection entirely electronic,AL2024,
+AcademicLibraries,LCOLELYN,2014-2024,2,no,Library collection not entirely electronic,AL2024,
+AcademicLibraries,LILLDYN,2016-2024,1,yes,Institution has interlibrary loan services,AL2024,
+AcademicLibraries,LILSYN,2020-2024,1,yes,Institution has library staff,AL2024,Staff amounts are FTE
+AcademicLibraries,LFRNGBYN,2014-2024,-2,not_applicable,Fringe benefits screener not applicable,AL2024,Often below expenditure threshold; not a zero fringe amount
+AcademicLibraries,LSUPPVRS,2014-2015,1,yes,Library supports virtual reference services,AL2014,Field not present from 2016

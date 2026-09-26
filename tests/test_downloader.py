@@ -1,61 +1,61 @@
-import os
-import shutil
+"""Offline download/cache integration for year selectors and NCES ZIP roots."""
+
+import io
+import json
+import zipfile
+from pathlib import Path
 
 import pytest
 
 from genpeds import scrape_ipeds_data
+from genpeds.downloader import get_year_iter
 
-@pytest.mark.parametrize('subject, year_range_char', [
-    # characteristics
-    ('characteristics', (1990,2003)),
-    ('characteristics', [2002,2004,2006,2008]),
-    ('characteristics', 2024),
-    # admissions
-    ('admissions', (2008,2012)),
-    ('admissions', [2001,2014,2018]),
-    ('admissions', 2022),
-    # enrollment
-    ('enrollment', [2018,2020,2024]),
-    ('enrollment', (1985,1990)),
-    ('enrollment', 2002),
-    # completion
-    ('completion', (1984,1989)),
-    ('completion', [2003,2015,2024]),
-    ('completion', 2010),
-    # graduation
-    ('graduation', (2000,2005)),
-    ('graduation', [2008,2013,2017,2019]),
-    ('graduation', 2022)
 
+@pytest.mark.parametrize('subject,year_range', [
+    ('characteristics', (2000, 2002)),
+    ('admissions', [2001, 2014, 2023]),
+    ('enrollment', 2024),
+    ('completion', [1984, 2024]),
+    ('graduation', (2022, 2023)),
+    ('academic_libraries', [2014, 2024]),
 ])
+def test_year_selection_endpoint_revision_and_cache(tmp_path, monkeypatch, subject, year_range):
+    monkeypatch.chdir(tmp_path)
+    with (Path(__file__).resolve().parents[1] / 'src/genpeds/cfg.json').open() as handle:
+        cfg = json.load(handle)
+    years = get_year_iter(subject, year_range)
+    requested_urls = []
 
-def test_subject_downloads(subject, year_range_char):
-    '''test IPEDS variable-subject data scraping'''
-    download_dir = f'{subject}data'
-    if os.path.exists(download_dir):
-        shutil.rmtree(download_dir)
+    class Response:
+        status_code = 200
+        headers = {}
 
-    try:
-        scrape_ipeds_data(subject=subject, year_range=year_range_char)
-        assert os.path.exists(download_dir), f'{subject.title()} directory not found.'
-        # tuple range
-        if isinstance(year_range_char, tuple):
-            start,end = year_range_char
-            for yr in range(start, end + 1):
-                f_name = f'{subject}_{yr}.csv'
-                assert f_name in os.listdir(download_dir), f'File {f_name} not found.'
-        # list range
-        elif isinstance(year_range_char, list):
-            for yr in year_range_char:
-                f_name = f'{subject}_{yr}.csv'
-                assert f_name in os.listdir(download_dir), f'File {f_name} not found.'
-        # single year
-        else:
-            f_name = f'{subject}_{year_range_char}.csv'
-            assert f_name in os.listdir(download_dir), f'File {f_name} not found.'
-    finally:
-        shutil.rmtree(download_dir)
+        def __init__(self, stem):
+            buffer = io.BytesIO()
+            with zipfile.ZipFile(buffer, 'w') as archive:
+                archive.writestr(f'{stem.lower()}.csv', b'UNITID\n100001\n')
+                archive.writestr(f'{stem.lower()}_rv.csv', b'UNITID\n100002\n')
+            self.content = buffer.getvalue()
 
-# you're reading this? 
-# well, you should be reading 'The Master and Margarita' by Mikhail Bulgakov instead.
-# you won't regret it friend :)
+        def iter_content(self, chunk_size):
+            yield self.content
+
+        def close(self):
+            pass
+
+    def fake_get(url, **kwargs):
+        requested_urls.append(url)
+        return Response(url.rsplit('/', 1)[-1].removesuffix('.zip'))
+
+    monkeypatch.setattr('genpeds.downloader.requests.get', fake_get)
+    scrape_ipeds_data(subject, year_range, see_progress=False)
+    scrape_ipeds_data(subject, year_range, see_progress=False)  # cached
+    expected = {
+        ('https://nces.ed.gov/ipeds/complete-data-files/' if year > 2022 else
+         'https://nces.ed.gov/ipeds/datacenter/data/') +
+        cfg[subject]['endpoints'][str(year)] + '.zip' for year in years
+    }
+    assert set(requested_urls) == expected and len(requested_urls) == len(years)
+    for year in years:
+        csv = tmp_path / f'{subject}data' / f'{subject}_{year}.csv'
+        assert csv.is_file() and b'100002' in csv.read_bytes()

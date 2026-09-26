@@ -27,11 +27,16 @@ from genpeds.human_resources import (  # noqa: E402
     HR_DATASETS, HR_FIELDS, HR_VARIABLES, HR_CATEGORY_FIELDS,
 )
 from genpeds.finance import FINANCE_FIELDS, FINANCE_VARIABLES  # noqa: E402
+from genpeds.academic_libraries import (  # noqa: E402
+    LIBRARY_FIELDS, LIBRARY_SCREENS, LIBRARY_FIELD_YEARS,
+    LIBRARY_SCREEN_YEARS, LIBRARY_VARIABLES,
+)
 
 
 CONFIG = json.loads((ROOT / 'src/genpeds/cfg.json').read_text(encoding='utf-8'))
 CONFIG['human_resources']['variables'] = HR_VARIABLES
 CONFIG['finance']['variables'] = FINANCE_VARIABLES
+CONFIG['academic_libraries']['variables'] = LIBRARY_VARIABLES
 PUBLIC = {
     'characteristics': 'Characteristics', 'admissions': 'Admissions',
     'enrollment': 'Enrollment', 'distance_enrollment': 'DistanceEnrollment',
@@ -42,6 +47,7 @@ PUBLIC = {
     'completers': 'Completers', 'graduation': 'Graduation',
     'graduation200': 'Graduation200', 'outcome_measures': 'OutcomeMeasures',
     'human_resources': 'HumanResources', 'finance': 'Finance',
+    'academic_libraries': 'AcademicLibraries',
     'cip': 'Cip',
 }
 SOURCE_TO_API = {**PUBLIC, 'tuition_program': 'Tuition',
@@ -67,6 +73,7 @@ TABLES = {
     'outcome_measures': 'OM annual cohort/status file',
     'human_resources': 'EAP; S*_OC/IS/SIS/NH; SAL*_IS/NIS (selected dataset)',
     'finance': 'F*_F1A (GASB), F*_F2/F3 (FASB); selected form',
+    'academic_libraries': 'AL2014-AL2024 annual Academic Libraries',
     'cip': 'Completions A data dictionary CIPCODE frequencies',
 }
 GRAIN = {
@@ -87,6 +94,7 @@ GRAIN = {
     'outcome_measures': 'institution × eight-year status year × entry cohort/Pell subgroup',
     'human_resources': 'dataset-dependent: institution × year × occupation/staff/tenure/rank code',
     'finance': 'institution × fiscal year × accounting form',
+    'academic_libraries': 'institution × library fiscal year',
     'cip': 'CIP code × dictionary year',
 }
 
@@ -251,6 +259,19 @@ def availability(subject, variable):
         if base == 'revenues_and_investment_return':
             return '2004-2024; FASB F2/F3 only'
         return '2004-2024; form-specific source, applicability, and accounting regime'
+    if subject == 'academic_libraries':
+        for raw, (name, flag) in LIBRARY_FIELDS.items():
+            if name == base:
+                first = LIBRARY_FIELD_YEARS.get(raw, 2014)
+                return (f'{first}-2024; survey eligibility and definition vary'
+                        + ('; no raw X flag' if not flag else ''))
+        for raw, name in LIBRARY_SCREENS.items():
+            if name == base or name + '_code' == base:
+                start, end = LIBRARY_SCREEN_YEARS.get(raw, (2014, 2024))
+                return f'{start}-{end}; source screening code (1 yes / 2 no / -2 not applicable)'
+        if base == 'collection_total_definition':
+            return '2014-2018 excludes serials; 2019-2024 includes serials in collection totals'
+        return '2014-2024; annual AL fiscal-year records'
     if subject == 'cip':
         return '1984-2025; code definitions/versions vary by year'
     raise KeyError(subject)
@@ -287,6 +308,12 @@ def source_fields(subject, variable):
         fields = [(('X' if status else '') + raw.upper())
                   for group in FINANCE_FIELDS.values()
                   for raw, output in group.items() if output == name]
+    elif subject == 'academic_libraries':
+        fields = [(flag if status else raw).upper()
+                  for raw, (output, flag) in LIBRARY_FIELDS.items()
+                  if output == name and (not status or flag)]
+        fields += [raw.upper() for raw, output in LIBRARY_SCREENS.items()
+                   if name in (output, output + '_code')]
     elif subject == 'instructional_activity':
         fields = [(('X' if status else '') + raw.upper())
                   for raw, output in INSTRUCTIONAL_ACTIVITY_FIELDS.items()
@@ -424,6 +451,10 @@ def source_fields(subject, variable):
             'accounting_regime': ('source form|fiscal year', '2004-09 prealigned; 2010+ aligned; F3 revised from FY2014'),
             'source_stem': ('configured source file', 'exact NCES ZIP filename stem'),
         },
+        'academic_libraries': {
+            'collection_total_definition': ('source year|LPCLLCT|LECLLCT',
+                                            '2014-18 omit serials; 2019+ include serials'),
+        },
     }
     if name in calculations.get(subject, {}):
         raw, method = calculations[subject][name]
@@ -494,6 +525,17 @@ def units(subject, variable):
             return 'people'
     if subject == 'finance' and variable in FINANCE_MEASURE_NAMES:
         return 'nominal institutional dollars (form/era-specific)'
+    if subject == 'academic_libraries':
+        if variable in (name for raw, (name, _) in LIBRARY_FIELDS.items()
+                        if raw in ('lstotal', 'lslibrn', 'lsoprof', 'lsopaid', 'lsstast')):
+            return 'full-time equivalent library staff (not people headcount)'
+        if variable in (name for raw, (name, _) in LIBRARY_FIELDS.items()
+                        if raw in ('lsalwag', 'lfrngbn', 'lexmsbb', 'lexmscs',
+                                   'lexmsot', 'lexmstl', 'lexomps', 'lexomot',
+                                   'lexomtl', 'lexptot', 'lswmsom')):
+            return 'nominal dollars'
+        if variable in (name for raw, (name, _) in LIBRARY_FIELDS.items()):
+            return 'library items, uses, loans or branches (see description)'
     if subject == 'instructional_activity':
         if variable.endswith('_hours'):
             return 'instructional credit/contact/clock hours (not unique students)'
@@ -585,7 +627,9 @@ def file_rows():
             yield dict(api_class=SOURCE_TO_API[subject], download_subject=subject,
                        configured_year=year, source_stem=stem, data_zip_url=data,
                        dictionary_zip_url=dictionary, reference_period=period,
-                        evidence=('data ZIP HTTP HEAD 200 on 2026-09-26; dictionaries checked for sampled years'
+                        evidence=('data and dictionary ZIP HTTP HEAD 200 on 2026-09-26; sample dictionaries and CSVs inspected'
+                                  if subject == 'academic_libraries' else
+                                  'data ZIP HTTP HEAD 200 on 2026-09-26; dictionaries checked for sampled years'
                                   if subject.startswith('finance') else
                                   'configured endpoint in src/genpeds/cfg.json; URL not independently rechecked by this CSV'))
 

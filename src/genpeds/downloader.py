@@ -22,7 +22,7 @@ SUBJECTS = {
     'twelve_month_enrollment', 'instructional_activity', 'retention', 'tuition', 'tuition_program',
     'student_aid', 'student_aid_net_price', 'veterans_aid', 'completion',
     'completers', 'completers_by_award', 'cip', 'graduation', 'graduation200',
-    'outcome_measures', 'finance', 'finance_f2', 'finance_f3',
+    'outcome_measures', 'finance', 'finance_f2', 'finance_f3', 'academic_libraries',
     'human_resources', 'hr_employees',
     'hr_instructional_staff', 'hr_faculty_ranks', 'hr_new_hires',
     'hr_instructional_salaries', 'hr_noninstructional_salaries'
@@ -70,6 +70,8 @@ def get_year_iter(subject: str,
             iter_range = list(range(start, end + 1))
         elif subject == 'finance' or subject.startswith('finance_'):
             iter_range = list(range(2004, 2025))
+        elif subject == 'academic_libraries':
+            iter_range = list(range(2014, 2025))
         elif subject in ('completion', 'cip'):
             start, end = 1984, 2025
             iter_range = list(range(start, end + 1))
@@ -139,6 +141,8 @@ def get_year_iter(subject: str,
     if (subject == 'finance' or subject.startswith('finance_')) and any(
             year < 2004 or year > 2024 for year in iter_range):
         raise ValueError('Finance F1A/F2/F3 files are available for fiscal years 2004-2024')
+    if subject == 'academic_libraries' and any(year < 2014 or year > 2024 for year in iter_range):
+        raise ValueError('Annual Academic Libraries files are available for fiscal years 2014-2024')
     if subject in ('completion', 'cip') and any(year < 1984 or year > 2025 for year in iter_range):
         raise ValueError('Completion and CIP files are available for years 1984-2025')
     if subject in ('completers', 'completers_by_award') and any(year < 2012 or year > 2025 for year in iter_range):
@@ -305,6 +309,8 @@ def scrape_ipeds_data(subject: str = 'characteristics',
     - :human_resources: staff by occupation/attendance and sex/race, 2012-2024 (S*_OC). Internal hr_* subjects download the other modern HR families selected by HumanResources.run(dataset=...).
 
     - :finance: public GASB finance (F*_F1A), fiscal years 2004-2024. Internal finance_f2 and finance_f3 subjects download the FASB forms selected by Finance.run(form=...).
+
+    - :academic_libraries: annual AL2014-AL2024 institution-level library collections, services, staffing and expenditures, by fiscal year. The collection was retired after 2024-25.
     '''
     if not isinstance(subject, str):
         raise TypeError('subject must be a string')

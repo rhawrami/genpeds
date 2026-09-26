@@ -17,6 +17,7 @@ Admissions now retains applicant/admit/enrollment breakdowns and year-specific a
 InstructionalActivity now complements 12-month enrollment headcounts with hours and FTE through 2025.
 HumanResources now covers modern staffing, faculty, new-hire and salary tables through 2024.
 Finance now covers public GASB and nonprofit/for-profit FASB fiscal-year statements, 2004–2024.
+AcademicLibraries now covers the complete 2014–2024 annual AL collection, including collections, circulation, library FTE and spending.
 
 ## Usage
 
@@ -110,7 +111,7 @@ IPEDS [covers](https://nces.ed.gov/ipeds/about-ipeds) eight main subjects:
 7. Student Financial Aid
 8. Institutional Resources including Human Resources, Finance, and Academic Libraries
 
-`genpeds` supports selected data from the first seven subject areas and Human Resources and Finance within institutional resources. Academic Libraries remain to be added:
+`genpeds` supports selected data from the first seven subject areas and Human Resources, Finance and Academic Libraries within institutional resources:
 
 - **Characteristics** (directory, geography and institutional classification; available 1984–2025)
 ```python
@@ -282,6 +283,22 @@ finance.get_form_vars('f3')  # applicable fields; some begin only in 2014/2020
 
 To check the full Finance download → clean → Characteristics merge against NCES, run `GENPEDS_LIVE_TESTS=1 pytest tests/test_finance_live.py -q`. This downloads the FY2023 F1A/F2/F3 files and HD2023 into an isolated temporary directory. The test is skipped in the ordinary suite so routine runs remain fast and work without network access.
 
+- **AcademicLibraries** (annual library resources, fiscal years 2014–2024)
+```python
+from genpeds import AcademicLibraries
+
+al = AcademicLibraries([2014, 2019, 2024])
+library_df = al.run(merge_with_char=True)
+library_df[['id', 'year', 'physical_books', 'electronic_books',
+            'total_expenditures', 'staff_fte']]
+# Clean a previously downloaded year without contacting NCES:
+local_df = AcademicLibraries(2024).clean()
+```
+
+`year=2024` means **fiscal 2024** (`AL2024`, collected in 2024–25), not 2024–25 tuition. The annual AL series **ended after 2024–25**; older biennial Academic Libraries Survey (ALS) files are a separate collection, not more years of the same source. The output retains each NCES amount and its `*_status` flag, plus categorical codes/labels for the collection, services, staffing and spending screeners. `expenditure_threshold_code` starts in **2019** (`1` at least $100,000, `2` below); earlier missing screener values are **unknown**. Detailed library expenses (`total_expenditures`, `salaries_wages` etc.) are not reported by many below-threshold libraries: missing is not zero. `expenditures_excluding_fringe` is the separate NCES-calculated `LSWMSOM`, not `total_expenditures` and has no X flag. Collection and circulation totals begin in **2015**, individual serial counts in **2016**, and the `physical_collections` / `electronic_collections` definition adds serials in **2019**; `collection_total_definition` records the break. Library staff **FTE** begins in **2020** and is not an HR employee headcount. The 2024 AL release was provisional when checked. Downloads are cached in `academic_librariesdata/`; `rm_disk` and `merge_with_char` work as in the other classes. See the [AL harmonization guide](codebook/harmonization.md#academic-libraries) for source eligibility and meanings.
+
+An opt-in live integration check (`GENPEDS_LIVE_TESTS=1 pytest tests/test_academic_libraries_live.py -q`) downloads final FY2023 AL and HD files and checks the cleaned join; the ordinary suite skips it.
+
 - **HumanResources** (modern IPEDS staffing and salary files, 2012–2024)
 ```python
 from genpeds import HumanResources
@@ -387,7 +404,7 @@ initial = OutcomeMeasures((2015, 2016)).run(
 
 `cohort_type` accepts `'all'` (default), `'total'` (2017+), or the first-/non-first-time × full-/part-time groups. `pell_group` is `'total'` (default), `'pell'`, `'non_pell'`, or `'all'`; Pell breakdowns exist only from **2017**. `'all'` includes overlapping overall and Pell subcohorts: **never sum them as independent people**. `year=2024` follows July 2016–June 2017 entering students to August 2024. `awards_4/6/8` and `awards_*_pct` retain NCES's counts and published rates for awards at the reporting institution; `certificate_*`, `associate_*`, and `bachelor_*` distinguish highest award at each checkpoint from 2017. Eight-year `still_enrolled_here_8`, `subsequently_enrolled_elsewhere_8`, `enrollment_unknown_8`, and `no_award_8` describe further outcomes, **not earnings or awards earned elsewhere**. The 2015–16 `schema_version='initial'` has separate six- and eight-year adjusted cohorts and no four-year/Pell/award-level breakdown; 2015 also has an `inconsistency_flag`. Counts and percentages preserve NCES `_status` flags. Source ZIPs are cached in `outcome_measuresdata/`. See the [harmonization guide](codebook/harmonization.md#outcome-measures) for cross-year interpretation.
 
-These classes support institution-level trends across admissions, enrollment, persistence, completions, prices, aid, staffing, and institutional finance. Further IPEDS subjects and additional fields within existing subjects can be added over time.
+These classes support institution-level trends across admissions, enrollment, persistence, completions, prices, aid, staffing, finance, and academic libraries. Further IPEDS subjects and additional fields within existing subjects can be added over time.
 
 ## Development Installation
 
@@ -414,6 +431,8 @@ This will install `genpeds` in editable mode, allowing you to make changes to th
 ### 4. Run tests
 ```bash
 pytest tests/
+# Opt in to live NCES download/clean/merge checks as well:
+GENPEDS_LIVE_TESTS=1 pytest tests/
 ```
 
-This will run all tests in the `tests/` directory to verify that the installation and package functionality are working correctly.
+The default suite is offline and uses isolated temporary caches. The opt-in checks fetch a small number of real NCES files and also use temporary directories; test order and pre-existing download folders do not affect either mode.

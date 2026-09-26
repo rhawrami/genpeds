@@ -10,6 +10,7 @@ from genpeds.downloader import scrape_ipeds_data, get_year_iter
 from genpeds.cleaners import CLEANERS, _validate_om_selection
 from genpeds.human_resources import HR_DATASETS, HR_VARIABLES, dataset_vars
 from genpeds.finance import FINANCE_FORMS, FINANCE_VARIABLES, clean_finance, form_vars
+from genpeds.academic_libraries import LIBRARY_VARIABLES, clean_academic_libraries
 
 
 def _remove_download_dir(directory: str) -> None:
@@ -657,6 +658,41 @@ class Finance(IPDS):
         '''Download and clean fiscal-year Finance, optionally joining IC by year.'''
         self.scrape(form=form, see_progress=see_progress)
         df = self.clean(form=form, rm_disk=rm_disk)
+        if merge_with_char:
+            char_df = Characteristics(year_range=self.year_range).run(
+                see_progress=see_progress, rm_disk=rm_disk)
+            df = _merge_characteristics(df, char_df)
+        return df
+
+
+class AcademicLibraries(IPDS):
+    '''Annual IPEDS Academic Libraries institutional resources.'''
+    subject = 'academic_libraries'
+
+    def __init__(self,
+                 year_range: Optional[Union[Tuple[int, int], List[int], int]] = None):
+        '''Fiscal years ending 2014-2024; accepts an inclusive tuple, list or year.'''
+        get_year_iter(self.subject, year_range)
+        super().__init__(year_range)
+        self.variable_dict = LIBRARY_VARIABLES
+
+    def clean(self,
+              libraries_dir: str = 'academic_librariesdata',
+              rm_disk: bool = False) -> pd.DataFrame:
+        '''Clean cached Academic Libraries CSVs, optionally removing the cache.'''
+        df = clean_academic_libraries(libraries_dir=libraries_dir,
+                                      year_range=self.year_range)
+        if rm_disk:
+            _remove_download_dir(libraries_dir)
+        return df
+
+    def run(self,
+            see_progress: bool = False,
+            merge_with_char: bool = False,
+            rm_disk: bool = False) -> pd.DataFrame:
+        '''Download and clean AL files, optionally joining Characteristics.'''
+        self.scrape(see_progress=see_progress)
+        df = self.clean(rm_disk=rm_disk)
         if merge_with_char:
             char_df = Characteristics(year_range=self.year_range).run(
                 see_progress=see_progress, rm_disk=rm_disk)
