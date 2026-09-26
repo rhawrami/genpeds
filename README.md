@@ -436,3 +436,5 @@ GENPEDS_LIVE_TESTS=1 pytest tests/
 ```
 
 The default suite is offline and uses isolated temporary caches. The opt-in checks fetch a small number of real NCES files and also use temporary directories; test order and pre-existing download folders do not affect either mode.
+
+GitHub Actions runs the offline suite and `python codebook/build.py --check` on pushes and pull requests using Python 3.9 and 3.13 (`.github/workflows/ci.yml`). Live NCES tests remain opt-in for local runs.
