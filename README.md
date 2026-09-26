@@ -9,7 +9,7 @@ Per [IPEDS](https://nces.ed.gov/ipeds/about-ipeds):
 `genpeds`, or the **[gen]dered [p]ostsecondary [education] [d]ata [s]atrap**, provides a Python API for downloading and cleaning IPEDS data across subjects, including measures without a gender breakdown.
 
 ## Recent Updates
-Support for 2024 data has been added.
+Characteristics and 12-month enrollment now include the released 2025 files; most other classes currently end in 2024.
 Tuition, StudentAid, and VeteransAid now provide institutional price and aid data.
 
 ## Usage
@@ -104,7 +104,7 @@ IPEDS [covers](https://nces.ed.gov/ipeds/about-ipeds) eight main subjects:
 
 `genpeds` supports selected data from the first seven subject areas. Finance, Human Resources, and Academic Libraries remain to be added:
 
-- **Characteristics** (e.g., school name, address, longitude/latitude, etc.) (available 1984-2024)
+- **Characteristics** (directory, geography and institutional classification; available 1984–2025)
 ```python
 from genpeds import scrape_ipeds_data, Characteristics
 
@@ -114,7 +114,12 @@ scrape_ipeds_data(subject='characteristics',
 chardat = Characteristics(year_range=(1984,2023))
 
 char_df = chardat.run(rm_disk=False)
+# Or: Characteristics(2025).run()[['id', 'name', 'control', 'sector', 'locale_code']]
 ```
+
+The output includes `control` (public/private, with profit status when known), program `level`, `sector`, nullable `hbcu`, `tribal` and `degree_granting` indicators, `locale_code`/`locale_scheme`, and `carnegie_2021_basic_code`. The matching `*_code` columns retain the NCES source codes, including special missing/not-applicable values. **Historical meanings differ:** `CONTROL=2` in 1984–85 means private without a profit-status distinction, whereas from 1986 it means private nonprofit; `ICLEVEL=7` in 1984–85 means unclassified rather than a less-than-two-year program. HBCU and tribal fields start in 1992 and 1993, degree-granting status in 2000, and the 2021 Carnegie Basic code in 2021. The `LOCALE` code system switches from legacy urbanization codes to urban-centric codes in 2005; compare codes only within the same `locale_scheme`. Early nonresponse is kept missing rather than interpreted as a negative answer.
+
+The 1986 header extract contains multiple distinct institutions using the same placeholder UNITID `247719`; their identifiers are **not suitable as a unique merge key**. Other years were checked against downloaded headers for duplicate institution-year IDs. A `merge_with_char=True` request involving 1986 now raises an error rather than multiplying the affected subject rows; `Characteristics(1986).run()` still returns the original header records.
 - **Admissions** (e.g., SAT/ACT scores, admit rates by gender, etc.) (available 2001-2024)
 ```python
 from genpeds import scrape_ipeds_data, Admissions
@@ -139,6 +144,22 @@ enrolldat = Enrollment(year_range=(1984,2023))
 enroll_df = enrolldat.run(merge_with_char=False,
                           student_level='undergrad')
 ```
+- **TwelveMonthEnrollment** (unduplicated July–June enrollment headcounts; periods ending 2002–2025)
+```python
+from genpeds import TwelveMonthEnrollment
+
+annual = TwelveMonthEnrollment(year_range=[2002, 2019, 2025])
+undergrad_df = annual.run(student_level='undergrad', merge_with_char=True)
+grad_df = annual.run(student_level='grad')
+
+# 'total' returns institution-wide headcounts; 'all' returns one row per
+# available level, including the overlapping institution-wide total.
+all_levels_df = annual.run(student_level='all')
+```
+
+`year=2025` means **July 2024 through June 2025**; this unduplicated count is not the fall enrollment snapshot. `student_level` accepts `'undergrad'` (default), `'grad'`, `'total'`, `'all'`, or `'first_professional'` for years 2002–2010 only. NCES reported first-professional students **separately** from graduate students through 2010 and combined them into graduate reporting thereafter; do not infer a consistent historical graduate series without accounting for that break. In `'all'`, the `total` row overlaps the other levels and must not be summed with them. Through 2019 the cleaner selects `LSTUDY` rows; from 2020 it selects `EFFYALEV` codes 1, 2, and 12, excluding nested undergraduate detail rows. `source_level_code` and `level_code_system` record which coding scheme was used.
+
+The output includes reported total, men/women and race/ethnicity headcounts with matching `_status` flags. The older combined Asian/Pacific Islander category (`asian_pacific`) is available in 2002–2007; `asian` and `pacific_islander` are distinct from 2008. Race definitions should be compared with each year's NCES dictionary. `TwelveMonthEnrollment(2025).run(merge_with_char=True)` joins the 2025 Characteristics snapshot by UNITID and year; its survey snapshot and the enrollment reporting period refer to different time windows. Downloads are cached in `twelve_month_enrollmentdata/` unless `rm_disk=True`.
 - **Retention** (first-year undergraduate retention for full-time and part-time entering students; available 2003–2024)
 ```python
 from genpeds import Retention

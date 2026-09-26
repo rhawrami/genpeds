@@ -16,7 +16,11 @@ VARIABLE_RENAME = {
         'unitid' : 'id', 'instnm' : 'name',
           'addr' : 'address', 'city' : 'city', 'stabbr' : 'state', 'zip' : 'zipcode', 
           'webaddr' : 'webaddress', 
-          'longitud' : 'longitude', 'latitude' : 'latitude'
+          'longitud' : 'longitude', 'latitude' : 'latitude',
+          'control': 'control_code', 'iclevel': 'level_code',
+          'sector': 'sector_code', 'hbcu': 'hbcu_code',
+          'tribal': 'tribal_code', 'deggrant': 'degree_granting_code',
+          'locale': 'locale_code', 'c21basic': 'carnegie_2021_basic_code'
     },
 
     'admissions' : {
@@ -143,8 +147,35 @@ VETERANS_AID_FIELDS = {
 }
 
 
+SECTOR_LABELS = {
+    '0': 'Administrative unit',
+    '1': 'Public, four-year or above', '2': 'Private nonprofit, four-year or above',
+    '3': 'Private for-profit, four-year or above', '4': 'Public, two-year',
+    '5': 'Private nonprofit, two-year', '6': 'Private for-profit, two-year',
+    '7': 'Public, less-than-two-year', '8': 'Private nonprofit, less-than-two-year',
+    '9': 'Private for-profit, less-than-two-year'
+}
+
+
+E12_FIELDS = {
+    'total_students': ('fyrace24', 'xfyrac24', 'efytotlt', 'xeytotlt'),
+    'men': ('fyrace15', 'xfyrac15', 'efytotlm', 'xeytotlm'),
+    'women': ('fyrace16', 'xfyrac16', 'efytotlw', 'xeytotlw'),
+    'nonresident': ('fyrace17', 'xfyrac17', 'efynralt', 'xeynralt'),
+    'black': ('fyrace18', 'xfyrac18', 'efybkaat', 'xefybkat'),
+    'american_indian': ('fyrace19', 'xfyrac19', 'efyaiant', 'xefyaiat'),
+    'asian_pacific': ('fyrace20', 'xfyrac20', None, None),
+    'hispanic': ('fyrace21', 'xfyrac21', 'efyhispt', 'xefyhist'),
+    'white': ('fyrace22', 'xfyrac22', 'efywhitt', 'xefywhit'),
+    'race_unknown': ('fyrace23', 'xfyrac23', 'efyunknt', 'xeyunknt'),
+    'asian': (None, None, 'efyasiat', 'xefyasit'),
+    'pacific_islander': (None, None, 'efynhpit', 'xefynhpt'),
+    'two_or_more': (None, None, 'efy2mort', 'xefy2mot')
+}
+
+
 def clean_characteristics(characteristics_dir: str = 'characteristicsdata',
-                          year_range: Optional[Union[Tuple[int,int], List[int], int]] = None) -> pd.DataFrame:
+                           year_range: Optional[Union[Tuple[int,int], List[int], int]] = None) -> pd.DataFrame:
     '''
     cleans institution characteristics data and returns complete characteristics data
 
@@ -159,10 +190,6 @@ def clean_characteristics(characteristics_dir: str = 'characteristicsdata',
 
     master_df = pd.DataFrame()
 
-    dtypes = {
-        'unitid' : str, 'instnm' : str, 'addr' : str, 'city' : str, 
-        'stabbr' : str, 'zip' : str, 'webaddr' : str, 'longitud' : str, 'latitude' : str
-    }
     for file in sorted_files:
         file_path = os.path.join(characteristics_dir, file)
         year_num = re.split(r'_|\.', f'{file}')[1]
@@ -173,8 +200,9 @@ def clean_characteristics(characteristics_dir: str = 'characteristicsdata',
             if int(year_num) not in year_iter:
                 continue
 
-        df = pd.read_csv(file_path, dtype=dtypes, encoding_errors='replace', low_memory=False)
-        df = df.rename(str.lower, axis='columns')
+        df = pd.read_csv(file_path, dtype=str, index_col=False,
+                         encoding_errors='replace', low_memory=False)
+        df.columns = df.columns.str.lower().str.strip()
         
         if int(year_num) > 1998:
             if int(year_num) > 2008:
@@ -183,16 +211,48 @@ def clean_characteristics(characteristics_dir: str = 'characteristicsdata',
                 filt_col = ['unitid', 'instnm', 'addr', 'city', 'stabbr', 'zip', 'webaddr'] # long/lat NA for before 2008
         else:
             filt_col = ['unitid', 'instnm', 'addr', 'city', 'stabbr', 'zip'] # for years < 1999
-        df_filtered = df.loc[:, filt_col]
+        filt_col.extend(['control', 'iclevel', 'sector', 'hbcu', 'tribal',
+                         'deggrant', 'locale', 'c21basic'])
+        df_filtered = df.reindex(columns=filt_col).copy()
         
         for col in ['instnm', 'addr', 'city']:
             df_filtered[col] = df_filtered[col].str.title() # TitleCase
         df_filtered['year'] = int(year_num) # year identifier
         df_filtered['unitid'] = df_filtered['unitid'].astype(str).str.strip() # make id into string
         df_filtered['stabbr'] = df_filtered['stabbr'].map(state_mappings) # state abbreviation to state name
+        for col in ['control', 'iclevel', 'sector', 'hbcu', 'tribal',
+                    'deggrant', 'locale', 'c21basic']:
+            df_filtered[col] = df_filtered[col].astype('string').str.strip()
+        df_filtered = df_filtered.rename(columns=rename_dict)
+
+        if int(year_num) < 1986:
+            control_labels = {'0': 'Combined public and private', '1': 'Public',
+                              '2': 'Private (profit status unspecified)'}
+        else:
+            control_labels = {'1': 'Public', '2': 'Private nonprofit',
+                              '3': 'Private for-profit'}
+        df_filtered['control'] = df_filtered['control_code'].map(control_labels)
+        df_filtered['level'] = df_filtered['level_code'].map({
+            '1': 'Four-year or above', '2': 'Two-year', '3': 'Less-than-two-year'
+        })
+        df_filtered['sector'] = df_filtered['sector_code'].map(SECTOR_LABELS)
+        for code, name, start in (('hbcu_code', 'hbcu', 1992),
+                                  ('tribal_code', 'tribal', 1993)):
+            value = pd.Series(pd.NA, index=df_filtered.index, dtype='boolean')
+            if int(year_num) >= start:
+                value.loc[df_filtered[code] == '1'] = True
+                value.loc[df_filtered[code] == '2'] = False
+                if int(year_num) <= 1994:
+                    # In these dictionaries a blank explicitly means "no";
+                    # 1995-97 instead use missing/nonresponse conventions.
+                    value.loc[df_filtered[code].isna()] = False
+            df_filtered[name] = value
+        df_filtered['degree_granting'] = df_filtered['degree_granting_code'].map(
+            {'1': True, '2': False}).astype('boolean')
+        scheme = ('legacy' if int(year_num) < 2005 else 'urban_centric')
+        df_filtered['locale_scheme'] = scheme if int(year_num) >= 1995 else pd.NA
         master_df = pd.concat([master_df, df_filtered], ignore_index=True)
     
-    master_df = master_df.rename(columns=rename_dict) # rename vars
     return master_df
 
 
@@ -369,6 +429,77 @@ def clean_enrollment(enrollment_dir: str = 'enrollmentdata',
     master_df = pd.concat(df_list, ignore_index=True)
 
     return master_df
+
+
+def clean_twelve_month_enrollment(enrollment_dir: str = 'twelve_month_enrollmentdata',
+                                  student_level: str = 'undergrad',
+                                  year_range: Optional[Union[Tuple[int,int], List[int], int]] = None) -> pd.DataFrame:
+    '''Return unduplicated EFFY headcounts for the selected source level.
+
+    Through 2019 LSTUDY identifies level totals; since 2020 EFFYALEV has
+    many nested undergraduate detail rows and only codes 1, 2, and 12
+    represent the all-students, UG, and graduate totals respectively.
+    Pre-2011 first-professional students are a separate category, not
+    implicitly added to graduate headcounts.
+    '''
+    levels = {'undergrad', 'grad', 'first_professional', 'total', 'all'}
+    if student_level not in levels:
+        raise ValueError(f'student_level must be one of {sorted(levels)}')
+    requested = set(get_year_iter('twelve_month_enrollment', year_range)) if year_range is not None else None
+    if student_level == 'first_professional' and (requested is None or any(y > 2010 for y in requested)):
+        raise ValueError('first_professional is separate only for 2002-2010; select those years')
+
+    frames = []
+    found = set()
+    for file in sorted(os.listdir(enrollment_dir)):
+        match = re.fullmatch(r'twelve_month_enrollment_(\d{4})\.csv', file, flags=re.IGNORECASE)
+        if not match:
+            continue
+        year = int(match.group(1))
+        if requested is not None and year not in requested:
+            continue
+        if not 2002 <= year <= 2025:
+            continue
+        early_race = year < 2008
+        level_col = 'effyalev' if year >= 2020 else 'lstudy'
+        level_codes = ({'total': '1', 'undergrad': '2', 'grad': '12'}
+                       if year >= 2020 else
+                       {'total': '999', 'undergrad': '1', 'first_professional': '2', 'grad': '3'})
+        fields = [(name, pair[0 if early_race else 2], pair[1 if early_race else 3])
+                  for name, pair in E12_FIELDS.items()]
+        desired = {v for _, source, flag in fields for v in (source, flag) if v}
+        desired.update({'unitid', level_col})
+        df = pd.read_csv(os.path.join(enrollment_dir, file), dtype=str,
+                         index_col=False, low_memory=False, encoding_errors='replace',
+                         usecols=lambda c: c.strip().lower() in desired)
+        df.columns = df.columns.str.lower().str.strip()
+        required = {'unitid', level_col, *(source for name, source, _ in fields
+                                           if name in ('total_students', 'men', 'women'))}
+        if not required.issubset(df.columns):
+            raise ValueError(f'{file} is missing E12 headcount fields: {sorted(required - set(df.columns))}')
+        df = df.reindex(columns=sorted(desired))
+        chosen = (set(level_codes.values()) if student_level == 'all'
+                  else {level_codes[student_level]})
+        df = df.loc[df[level_col].str.strip().isin(chosen)].copy()
+        output = pd.DataFrame({'id': df['unitid'].str.strip(), 'year': year,
+                               'period_start_year': year - 1,
+                               'student_level': df[level_col].str.strip().map(
+                                   {code: name for name, code in level_codes.items()}),
+                               'source_level_code': df[level_col].str.strip(),
+                               'level_code_system': level_col})
+        for name, source, flag in fields:
+            output[name] = (pd.to_numeric(df[source], errors='coerce')
+                            if source else np.nan)
+            output[name + '_status'] = (df[flag].astype('string').str.strip()
+                                        if flag in df else pd.Series(pd.NA, index=df.index, dtype='string'))
+        frames.append(output)
+        found.add(year)
+
+    if requested is not None and requested - found:
+        raise FileNotFoundError(f'Missing downloaded 12-month enrollment years: {sorted(requested - found)}')
+    if not frames:
+        raise FileNotFoundError(f'No 12-month enrollment CSV files found in {enrollment_dir}')
+    return pd.concat(frames, ignore_index=True)
 
 
 def clean_retention(retention_dir: str = 'retentiondata',
@@ -865,6 +996,7 @@ CLEANERS = {
     'characteristics' : clean_characteristics,
     'admissions' : clean_admissions,
     'enrollment' : clean_enrollment,
+    'twelve_month_enrollment' : clean_twelve_month_enrollment,
     'retention' : clean_retention,
     'tuition' : clean_tuition,
     'student_aid' : clean_student_aid,

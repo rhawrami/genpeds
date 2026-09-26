@@ -22,7 +22,7 @@ def get_year_iter(subject: str,
     get year iterable based on subject and year input
 
     :param subject: string identifying which subject data to download. The subjects available are:
-     ['characteristics', 'admissions', 'enrollment', 'retention', 'tuition',
+     ['characteristics', 'admissions', 'enrollment', 'twelve_month_enrollment', 'retention', 'tuition',
       'tuition_program', 'student_aid', 'veterans_aid', 'completion', 'cip', 'graduation']
     
     :param year_range: tuple of year integers (indicates a range), iterable of year integers (indicates group of individual years), or single year to pull data from. Retention is available for 2003-2024; other subjects have their own year ranges. Defaults to all available years for a subject.
@@ -30,7 +30,13 @@ def get_year_iter(subject: str,
     subject = subject.lower()
 
     if not year_range:
-        if subject in ('tuition', 'tuition_program'):
+        if subject == 'characteristics':
+            start, end = 1984, 2025
+            iter_range = list(range(start, end + 1))
+        elif subject == 'twelve_month_enrollment':
+            start, end = 2002, 2025
+            iter_range = list(range(start, end + 1))
+        elif subject in ('tuition', 'tuition_program'):
             start, end = 2000, 2024
             iter_range = list(range(start, end + 1))
         elif subject == 'student_aid_net_price':
@@ -67,6 +73,10 @@ def get_year_iter(subject: str,
     
     if subject == 'retention' and any(year < 2003 or year > 2024 for year in iter_range):
         raise ValueError('Retention data is available for years 2003-2024')
+    if subject == 'characteristics' and any(year < 1984 or year > 2025 for year in iter_range):
+        raise ValueError('Characteristics data is available for years 1984-2025')
+    if subject == 'twelve_month_enrollment' and any(year < 2002 or year > 2025 for year in iter_range):
+        raise ValueError('12-month enrollment headcounts are available for years 2002-2025')
     if subject in ('tuition', 'tuition_program') and any(year < 2000 or year > 2024 for year in iter_range):
         raise ValueError('Tuition data is available for years 2000-2024')
     if subject == 'student_aid' and any(year < 2002 or year > 2024 for year in iter_range):
@@ -160,7 +170,7 @@ def scrape_ipeds_data(subject: str = 'characteristics',
     downloads NCES IPEDS data on specified years for a defined subject.
     
     :param subject: string identifying which subject data to download. The subjects available are:
-     ['characteristics', 'admissions', 'enrollment', 'retention', 'tuition',
+     ['characteristics', 'admissions', 'enrollment', 'twelve_month_enrollment', 'retention', 'tuition',
       'tuition_program', 'student_aid', 'veterans_aid', 'completion', 'cip', 'graduation']
     
     :param year_range: tuple of year integers (indicates a range), iterable of year integers (indicates group of individual years), or single year to pull data from. Retention is available for 2003-2024; other subjects have their own year ranges. Defaults to all available years for a subject.
@@ -169,11 +179,13 @@ def scrape_ipeds_data(subject: str = 'characteristics',
     
     ## available data
 
-    - :characteristics: institutional characteristics, like a school's name, address. Certain variables, like a school's longitude and latitude are only available in later years. Available for years 1984-2024.
+    - :characteristics: institutional characteristics, like a school's name, address, control, sector, and location. Certain variables, like coordinates, are only available in later years. Available for years 1984-2025.
 
     - :admissions: Admissions data, like number of applications and acceptances by gender. Available for years 2001-2024.
 
     - :enrollment: fall enrollment by gender and institutional level (e.g., 4-year undergraduate program), with most years including enrollment by race and gender. Available for years 1984-2024.
+
+    - :twelve_month_enrollment: unduplicated 12-month student headcounts, ending years 2002-2025 (EFFY files). Separate from the fall enrollment snapshot.
 
     - :retention: first-year full-time and part-time undergraduate retention rates and (from 2007) cohort counts. Available for years 2003-2024 in the Fall Enrollment D files.
 

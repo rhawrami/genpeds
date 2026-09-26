@@ -10,6 +10,16 @@ from genpeds.downloader import scrape_ipeds_data, get_year_iter
 from genpeds.cleaners import CLEANERS
 
 
+def _merge_characteristics(df: pd.DataFrame, char_df: pd.DataFrame) -> pd.DataFrame:
+    '''Avoid multiplying rows when a historical UNITID is not unique.'''
+    duplicates = char_df.duplicated(['id', 'year'], keep=False)
+    if duplicates.any():
+        years = sorted(char_df.loc[duplicates, 'year'].unique().tolist())
+        raise ValueError(f'Characteristics has non-unique UNITIDs in years {years}; '
+                         'cannot safely merge by id and year (1986 uses placeholder IDs)')
+    return df.merge(char_df, on=['id', 'year'], validate='many_to_one')
+
+
 class IPDS(ABC):
     subject = None
     
@@ -87,7 +97,7 @@ class Characteristics(IPDS):
         >>> import genpeds as ed
         >>> chars_2000 = ed.Characteristics(year_range=[2000,2005,2010]) # three years of data
         >>> chars_2000.get_available_years()
-         (1984,2024) # available years for Characteristics data
+         (1984,2025) # available years for Characteristics data
         >>> chars_data = chars_2000.run() # returns Pandas dataframe
 
         
@@ -214,7 +224,7 @@ class Admissions(IPDS):
         df = self.clean(rm_disk=rm_disk)
         if merge_with_char:
             char_df = Characteristics(year_range=self.year_range).run(see_progress=see_progress, rm_disk=rm_disk)
-            df = df.merge(char_df, on=['id', 'year'])
+            df = _merge_characteristics(df, char_df)
         return df
     
 
@@ -303,7 +313,44 @@ class Enrollment(IPDS):
         df = self.clean(rm_disk=rm_disk, student_level=student_level)
         if merge_with_char:
             char_df = Characteristics(year_range=self.year_range).run(see_progress=see_progress, rm_disk=rm_disk)
-            df = df.merge(char_df, on=['id', 'year'])
+            df = _merge_characteristics(df, char_df)
+        return df
+
+
+class TwelveMonthEnrollment(IPDS):
+    '''Unduplicated 12-month IPEDS enrollment headcounts.'''
+    subject = 'twelve_month_enrollment'
+
+    def __init__(self,
+                 year_range: Optional[Union[Tuple[int,int], List[int], int]] = None):
+        '''Reporting periods ending 2002-2025; inclusive range, list, or year.'''
+        get_year_iter(self.subject, year_range)
+        super().__init__(year_range)
+
+    def clean(self,
+              student_level: str = 'undergrad',
+              enroll_dir: str = 'twelve_month_enrollmentdata',
+              rm_disk: bool = False) -> pd.DataFrame:
+        '''Clean EFFY headcounts for undergrad, grad, total, or all levels.'''
+        df = CLEANERS[self.subject](enrollment_dir=enroll_dir,
+                                    student_level=student_level,
+                                    year_range=self.year_range)
+        if rm_disk:
+            shutil.rmtree(enroll_dir)
+        return df
+
+    def run(self,
+            student_level: str = 'undergrad',
+            see_progress: bool = False,
+            merge_with_char: bool = False,
+            rm_disk: bool = False) -> pd.DataFrame:
+        '''Download and clean EFFY files; optionally join Characteristics.'''
+        self.scrape(see_progress=see_progress)
+        df = self.clean(student_level=student_level, rm_disk=rm_disk)
+        if merge_with_char:
+            char_df = Characteristics(year_range=self.year_range).run(
+                see_progress=see_progress, rm_disk=rm_disk)
+            df = _merge_characteristics(df, char_df)
         return df
 
 
@@ -342,7 +389,7 @@ class Retention(IPDS):
         if merge_with_char:
             char_df = Characteristics(year_range=self.year_range).run(
                 see_progress=see_progress, rm_disk=rm_disk)
-            df = df.merge(char_df, on=['id', 'year'])
+            df = _merge_characteristics(df, char_df)
         return df
 
 
@@ -393,7 +440,7 @@ class Tuition(IPDS):
         if merge_with_char:
             char_df = Characteristics(year_range=self.year_range).run(
                 see_progress=see_progress, rm_disk=rm_disk)
-            df = df.merge(char_df, on=['id', 'year'])
+            df = _merge_characteristics(df, char_df)
         return df
 
 
@@ -443,7 +490,7 @@ class StudentAid(IPDS):
         if merge_with_char:
             char_df = Characteristics(year_range=self.year_range).run(
                 see_progress=see_progress, rm_disk=rm_disk)
-            df = df.merge(char_df, on=['id', 'year'])
+            df = _merge_characteristics(df, char_df)
         return df
 
 
@@ -476,7 +523,7 @@ class VeteransAid(IPDS):
         if merge_with_char:
             char_df = Characteristics(year_range=self.year_range).run(
                 see_progress=see_progress, rm_disk=rm_disk)
-            df = df.merge(char_df, on=['id', 'year'])
+            df = _merge_characteristics(df, char_df)
         return df
 
 
@@ -620,7 +667,7 @@ class Completion(IPDS):
         df = self.clean(rm_disk=rm_disk, degree_level=degree_level)
         if merge_with_char:
             char_df = Characteristics(year_range=self.year_range).run(see_progress=see_progress, rm_disk=rm_disk)
-            df = df.merge(char_df, on=['id', 'year'])
+            df = _merge_characteristics(df, char_df)
         if get_cip_codes:
             cip_df = Cip(year_range=self.year_range).run(see_progress=see_progress, rm_disk=rm_disk)
             df = df.merge(cip_df, on=['cip', 'year'])
@@ -712,5 +759,5 @@ class Graduation(IPDS):
         df = self.clean(rm_disk=rm_disk, degree_level=degree_level)
         if merge_with_char:
             char_df = Characteristics(year_range=self.year_range).run(see_progress=see_progress, rm_disk=rm_disk)
-            df = df.merge(char_df, on=['id', 'year'])
+            df = _merge_characteristics(df, char_df)
         return df

@@ -49,7 +49,9 @@ def test_common_methods(subject_name, subject, year_range):
     '''test non-unique methods for genpeds classes'''
     genpeds_class = subject(year_range=year_range)
     # test if .year_range() returns correct ranges
-    if isinstance(genpeds_class, (Characteristics, Enrollment, Completion)):
+    if isinstance(genpeds_class, Characteristics):
+        assert genpeds_class.get_available_years() == (1984,2025)
+    elif isinstance(genpeds_class, (Enrollment, Completion)):
         assert genpeds_class.get_available_years() == (1984,2024) # check if returns appropriate range
     elif isinstance(genpeds_class, Admissions):
         assert genpeds_class.get_available_years() == (2001,2024)
@@ -179,4 +181,3 @@ def test_graduation_extended(lev, year_range):
             if len(df2.loc[df2['name'] == school]) > 0: # these schools don't have assc programs
                 assert df2.loc[df2['name'] == school, 
                                              col].mean() > 80 # just a hunch
-

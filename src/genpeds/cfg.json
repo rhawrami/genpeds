@@ -1,7 +1,7 @@
 {
     "characteristics": {
-        "description": "Institutional characteristics for each school in a given year, including information like a school's name and address; available for years 1984-2024.", 
-        "years_available": [1984,2024],
+        "description": "Institutional names, addresses, location and classification for each year, 1984-2025. Some codes and fields have shorter histories.",
+        "years_available": [1984,2025],
         "endpoints": {
             "1984": "IC1984",
             "1985": "IC1985",
@@ -43,7 +43,8 @@
             "2021": "HD2021",
             "2022": "HD2022",
             "2023": "HD2023",
-            "2024": "HD2024"
+            "2024": "HD2024",
+            "2025": "HD2025"
         },
         "variables": {
             "id" : "Institutional unique identifier ID; though UNITIDs can vary over time due to instutions splitting, this variable is generally consistent for an institution over time.", 
@@ -55,7 +56,22 @@
             "zipcode" : "Zipcode of institution location.", 
             "webaddress" : "Admissions website URL of institution location.",
             "longitude" : "Longitude coordinate of institution location.", 
-            "latitude" : "Latitude coordinate of institution location."
+            "latitude" : "Latitude coordinate of institution location.",
+            "control_code": "Raw NCES CONTROL code. In 1984-85 2 means private without profit distinction; from 1986, 1 public, 2 private nonprofit, 3 private for-profit. Special codes are retained.",
+            "control": "Readable control category; the 1984-85 private category is not split by profit status.",
+            "level_code": "Raw NCES ICLEVEL code: 1 four-year or above, 2 two-year, 3 less-than-two-year; early 7 means unclassified, not less-than-two-year.",
+            "level": "Readable institutional program level for recognized ICLEVEL codes.",
+            "sector_code": "Raw NCES SECTOR code, available from 1986; combines institutional control and program level. Special codes are retained.",
+            "sector": "Readable sector for codes 0-9; unrecognized/not-applicable codes stay missing.",
+            "hbcu_code": "Raw NCES HBCU code from 1992, including historical blanks and missing/nonresponse codes.",
+            "hbcu": "Historically Black college or university: nullable boolean; historical nonresponse is not interpreted as no.",
+            "tribal_code": "Raw NCES TRIBAL code from 1993, including historical blanks and missing/nonresponse codes.",
+            "tribal": "Tribal college or university: nullable boolean; historical nonresponse is not interpreted as no.",
+            "degree_granting_code": "Raw NCES DEGGRANT code from 2000; 1 degree-granting, 2 non-degree-granting.",
+            "degree_granting": "Nullable degree-granting indicator, derived from DEGGRANT codes 1 and 2.",
+            "locale_code": "Raw NCES LOCALE degree-of-urbanization code from 1995; its code system changes in 2005.",
+            "locale_scheme": "legacy for 1995-2004 LOCALE codes; urban_centric from 2005; missing before 1995.",
+            "carnegie_2021_basic_code": "2021 Carnegie Basic Classification code (C21BASIC), available from 2021; not interchangeable with earlier Carnegie classification vintages."
         }
     },
     "admissions": {
@@ -186,6 +202,54 @@
             "totbk_share" : "Non-Hispanic Black share of total enrollment; 'total' here is defined as the sum of male and female enrollment; this includes both part-time and full-time enrollment.", 
             "tothsp_share" : "Hispanic share of total enrollment; 'total' here is defined as the sum of male and female enrollment; this includes both part-time and full-time enrollment.",
             "totasn_share" : "Non-Hispanic Asian share of total enrollment; 'total' here is defined as the sum of male and female enrollment; this includes both part-time and full-time enrollment."
+        }
+    },
+    "twelve_month_enrollment": {
+        "description": "Unduplicated student headcounts for July 1 through June 30 by undergraduate, graduate, and (through 2010) first-professional level; EFFY files for reporting periods ending 2002-2025. This is not the Fall Enrollment snapshot.",
+        "years_available": [2002, 2025],
+        "endpoints": {
+            "2002": "EFFY2002", "2003": "EFFY2003", "2004": "EFFY2004",
+            "2005": "EFFY2005", "2006": "EFFY2006", "2007": "EFFY2007",
+            "2008": "EFFY2008", "2009": "EFFY2009", "2010": "EFFY2010",
+            "2011": "EFFY2011", "2012": "EFFY2012", "2013": "EFFY2013",
+            "2014": "EFFY2014", "2015": "EFFY2015", "2016": "EFFY2016",
+            "2017": "EFFY2017", "2018": "EFFY2018", "2019": "EFFY2019",
+            "2020": "EFFY2020", "2021": "EFFY2021", "2022": "EFFY2022",
+            "2023": "EFFY2023", "2024": "EFFY2024", "2025": "EFFY2025"
+        },
+        "variables": {
+            "id": "Institutional UNITID identifier.",
+            "year": "Ending year of the 12-month July-June reporting period; EFFY2025 covers July 2024-June 2025.",
+            "period_start_year": "Starting year of the July-June reporting period (year minus one).",
+            "student_level": "One of undergrad, grad, total, or first_professional (2002-2010). The total level overlaps the separate level rows.",
+            "source_level_code": "Original LSTUDY level code through 2019 or EFFYALEV code from 2020; consult level_code_system.",
+            "level_code_system": "lstudy through 2019 and effyalev from 2020. The expanded system also contains nested UG rows, which are not summed here.",
+            "total_students": "Unduplicated student headcount at the selected level (FYRACE24 through 2007, EFYTOTLT from 2008).",
+            "men": "Unduplicated headcount reported in the men's/male category (FYRACE15 through 2007, EFYTOTLM from 2008).",
+            "women": "Unduplicated headcount reported in the women's/female category (FYRACE16 through 2007, EFYTOTLW from 2008).",
+            "nonresident": "Nonresident students (FYRACE17 through 2007, EFYNRALT from 2008); category wording changes to U.S. Nonresident in 2025.",
+            "black": "Black, non-Hispanic headcount (FYRACE18 through 2007, EFYBKAAT from 2008); consult each year's race definitions.",
+            "american_indian": "American Indian/Alaska Native headcount (FYRACE19 through 2007, EFYAIANT from 2008).",
+            "asian_pacific": "Combined Asian/Pacific Islander headcount (FYRACE20), 2002-2007 only. Not additive with later separately reported Asian and Pacific Islander categories.",
+            "hispanic": "Hispanic/Latino headcount (FYRACE21 through 2007, EFYHISPT from 2008).",
+            "white": "White, non-Hispanic headcount (FYRACE22 through 2007, EFYWHITT from 2008).",
+            "race_unknown": "Race/ethnicity unknown headcount (FYRACE23 through 2007, EFYUNKNT from 2008).",
+            "asian": "Asian headcount (EFYASIAT), reported separately from Native Hawaiian/Pacific Islander beginning 2008.",
+            "pacific_islander": "Native Hawaiian or other Pacific Islander headcount (EFYNHPIT), available from 2008.",
+            "two_or_more": "Two or more races headcount (EFY2MORT), available from 2008.",
+            "total_students_status": "NCES reporting/imputation status for total_students.",
+            "men_status": "NCES reporting/imputation status for men.",
+            "women_status": "NCES reporting/imputation status for women.",
+            "nonresident_status": "NCES reporting/imputation status for nonresident.",
+            "black_status": "NCES reporting/imputation status for black.",
+            "american_indian_status": "NCES reporting/imputation status for american_indian.",
+            "asian_pacific_status": "NCES reporting/imputation status for asian_pacific; missing when the field does not exist.",
+            "hispanic_status": "NCES reporting/imputation status for hispanic.",
+            "white_status": "NCES reporting/imputation status for white.",
+            "race_unknown_status": "NCES reporting/imputation status for race_unknown.",
+            "asian_status": "NCES reporting/imputation status for asian; missing before the field exists.",
+            "pacific_islander_status": "NCES reporting/imputation status for pacific_islander; missing before the field exists.",
+            "two_or_more_status": "NCES reporting/imputation status for two_or_more; missing before the field exists."
         }
     },
     "tuition": {
