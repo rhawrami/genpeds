@@ -8,8 +8,10 @@ Per [IPEDS](https://nces.ed.gov/ipeds/about-ipeds):
 
 `genpeds`, or the **[gen]dered [p]ostsecondary [education] [d]ata [s]atrap**, provides a Python API for downloading and cleaning IPEDS data across subjects, including measures without a gender breakdown.
 
+For the complete output-variable inventory, source mappings, and year-specific interpretation rules, see the stand-alone [API codebook and harmonization guide](codebook/README.md).
+
 ## Recent Updates
-Characteristics and 12-month enrollment now include the released 2025 files; most other classes currently end in 2024.
+Characteristics, 12-month enrollment, Completion and Completers include the released 2025 files; most other classes currently end in 2024.
 Tuition, StudentAid, and VeteransAid now provide institutional price and aid data.
 
 ## Usage
@@ -227,20 +229,42 @@ benefits_df = VeteransAid((2014, 2024)).run(merge_with_char=True)
 ```
 
 This separate class keeps institutions with **graduate-only** GI Bill or DoD Tuition Assistance recipients that are absent from the main SFA file. It provides recipient counts, total dollars, averages and `_status` flags by undergraduate/graduate level and benefit program. Award amounts represent benefits known to the institution, not every benefit a student may have received. Data are cached in `veterans_aiddata/`. For both aid classes, merging Characteristics uses the aid period's ending year as `year`; institutional characteristics are a snapshot from that year rather than the same aid-period measure.
-- **Completion** (e.g., degree completion by race/gender/subject/level, etc.) (available 1984-2024)
+- **Completion** (awards by CIP field, level and first/second major, 1984–2025)
 ```python
 from genpeds import scrape_ipeds_data, Completion
 
 scrape_ipeds_data(subject='completion',
                   year_range=(1984,2023))
 
-completedat = Completion(year_range=(1984,2023))
+completedat = Completion(year_range=(1984,2025))
 
 complete_df = completedat.run(degree_level='doct',
-                              get_cip_codes=True,
-                              merge_with_char=True,
-                              rm_disk=False)
+                               get_cip_codes=True,
+                               merge_with_char=True,
+                               rm_disk=False)
+
+# Filter first or second majors for years 2001 onward:
+first_majors = Completion((2020, 2025)).run(
+    degree_level='bach', major='first')
+second_majors = Completion(2025).run(
+    degree_level='bach', major='second')
 ```
+
+`major` accepts `'first'`, `'second'`, or `'both'` (default). The `MAJORNUM` code distinguishes first and second majors **from 2001 onward**. Before that, the C-A files do not identify major order: the default preserves those awards with `major_type='unspecified'`, and asking for first or second majors raises a `ValueError`. For later years `major_type` records the chosen category, or `'both'` when first- and second-major awards are summed within a CIP. A second major is another reported field of study, **not another distinct graduate**. `year=2025` is the July 2024–June 2025 award period; CIP descriptions are joined by code and reporting year.
+
+- **Completers** (distinct people earning degrees or certificates, 2012–2025)
+```python
+from genpeds import Completers
+
+# C-B: one row per institution/year, unduplicated across all awards:
+people_df = Completers((2012, 2025)).run(merge_with_char=True)
+
+# C-C: distinct completers within a specific award level, with age bands:
+bachelors_df = Completers(2025).run(degree_level='bach')
+levels_df = Completers(2025).run(degree_level='award_levels')
+```
+
+`degree_level='all'` (default) downloads C-B and counts each student **once across all awards**. `'assc'`, `'bach'`, `'mast'`, and `'doct'` select the corresponding C-C award level; `'award_levels'` returns **all** available C-C award levels, including certificates and postgraduate certificates, one row per institution/year/award level. C-C counts are unduplicated *within a level*, but a student may earn awards at multiple levels: **do not sum C-C rows to reproduce C-B**. C-C has age bands (`age_under_18`, `age_18_to_24`, `age_25_to_39`, `age_40_plus`, `age_unknown`); B has no age breakdown, so these fields are missing there. Both have overall and race/sex counts with `_status` flags. `award_level_code` normalizes leading zeros in source C codes, while `source_award_code` retains them. Short-certificate categories changed in 2020 (codes 11 and 12 replace the earlier code 1); the readable `award_level` reflects the year's dictionary. Neither B nor C has CIP/major-order detail; use `Completion` for awards by field. Downloads use `completersdata/` for B or `completers_by_awarddata/` for C, and `rm_disk=True` removes the selected cache.
 - **Graduation** (e.g., graduation rate by race/gender/level, etc.) (available 2000-2024)
 ```python
 from genpeds import scrape_ipeds_data, Graduation

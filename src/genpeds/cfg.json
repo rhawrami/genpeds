@@ -118,8 +118,8 @@
             "yield_rate_women" : "Yield rate (share of admitted students who ultimately enrolled) of female admittees.",
             "men_applied_share" : "Male share of total number of first-time, degree/certificate-seeking applicants in a given year.",
             "men_admitted_share" : "Male share of total number of first-time, degree/certificate-seeking admittees in a given year.", 
-            "share_submit_sat" : "Share of admitted students who submitted an SAT score.",
-            "share_submit_act" : "Share of admitted students who submitted an ACT score.", 
+            "share_submit_sat" : "Percentage of first-time degree/certificate-seeking students submitting SAT scores (SATPCT), not a percentage of all admitted applicants.",
+            "share_submit_act" : "Percentage of first-time degree/certificate-seeking students submitting ACT scores (ACTPCT), not a percentage of all admitted applicants.",
             "sat_rw_25" : "SAT reading/writing score (25th percentile).",
             "sat_rw_50" : "SAT reading/writing score (50th percentile).", 
             "sat_rw_75" : "SAT reading/writing score (75th percentile).", 
@@ -502,8 +502,8 @@
         }
     },
     "completion": {
-        "description": "Completion data for each school in a given year by detailed subject field, including information like the male completion share within a subject (e.g., Economics); available at the Associate, Bachelor's, Master's or Doctoral level; available for years 1984-2024.",
-        "years_available": [1984,2024],
+        "description": "Completion awards/degrees by field of study, award level, race/sex, and from 2001 first versus second major; available for 1984-2025. Before 2001, major order is not identified.",
+        "years_available": [1984,2025],
         "endpoints": {
             "1984": "C1984_CIP",
             "1985": "C1985_CIP",
@@ -545,28 +545,95 @@
             "2021": "C2021_A",
             "2022": "C2022_A",
             "2023": "C2023_A",
-            "2024": "C2024_A"
+            "2024": "C2024_A",
+            "2025": "C2025_A"
         },
         "variables": {
             "id" : "Institutional unique identifier ID; though UNITIDs can vary over time due to instutions splitting, this variable is generally consistent for an institution over time.", 
-            "year" : "Survey year. Note that the cohort being tracked is the cohort that started either six years back (for bachelor) or three years back (for associate).",
+            "year" : "Ending year of the July 1-June 30 award reporting period; e.g. C2025_A covers July 2024-June 2025. This is not a tracked graduation cohort.",
             "cip" : "CIP (Classification of Instructional Programs) code for a subject in a given year.", 
-            "totmen" : "Total number of male completers within a CIP subject.", 
-            "totwomen" : "Total number of female completers within a CIP subject.", 
-            "wtmen" : "Total number of non-Hispanic White men completers within a CIP subject.; this includes both part-time and full-time enrollment.", 
-            "wtwomen" : "Total number of non-Hispanic White women completers within a CIP subject.; this includes both part-time and full-time enrollment.", 
-            "bkmen" : "Total number of non-Hispanic Black men completers within a CIP subject.; this includes both part-time and full-time enrollment.",
-            "bkwomen" : "Total number of non-Hispanic Black women completers within a CIP subject.; this includes both part-time and full-time enrollment.",
-            "hspmen" : "Total number of Hispanic men (of any race) completers within a CIP subject.; this includes both part-time and full-time enrollment.", 
-            "hspwomen" : "Total number of Hispanic women (of any race) completers within a CIP subject.; this includes both part-time and full-time enrollment.", 
-            "asnmen" : "Total number of non-Hispanic Asian men completers within a CIP subject.; this includes both part-time and full-time enrollment.", 
-            "asnwomen" : "Total number of non-Hispanic Asian women completers within a CIP subject.; this includes both part-time and full-time enrollment.", 
-            "totwt_share" : "Non-Hispanic White share of total (male and female) completers within a CIP subject.",   
-            "totbk_share" : "Non-Hispanic Black share of total (male and female) completers within a CIP subject.", 
-            "tothsp_share" : "Hispanic share of total (male and female) completers within a CIP subject.",
-            "totasn_share" : "Non-Hispanic Asian share of total (male and female) completers within a CIP subject.",
-            "totmen_share" : "Male share of total (male and female) completers within a CIP subject.", 
+            "totmen" : "Number of awards reported for men in this CIP and selected degree/major category; not a count of distinct people.",
+            "totwomen" : "Number of awards reported for women in this CIP and selected degree/major category; not a count of distinct people.",
+            "wtmen" : "Awards reported for non-Hispanic White men in the selected CIP and award level.",
+            "wtwomen" : "Awards reported for non-Hispanic White women in the selected CIP and award level.",
+            "bkmen" : "Awards reported for non-Hispanic Black men in the selected CIP and award level.",
+            "bkwomen" : "Awards reported for non-Hispanic Black women in the selected CIP and award level.",
+            "hspmen" : "Awards reported for Hispanic men in the selected CIP and award level.",
+            "hspwomen" : "Awards reported for Hispanic women in the selected CIP and award level.",
+            "asnmen" : "Awards reported for non-Hispanic Asian men in the selected CIP and award level.",
+            "asnwomen" : "Awards reported for non-Hispanic Asian women in the selected CIP and award level.",
+            "totwt_share" : "Non-Hispanic White share of reported awards within this CIP and selected level/major category.",
+            "totbk_share" : "Non-Hispanic Black share of reported awards within this CIP and selected level/major category.",
+            "tothsp_share" : "Hispanic share of reported awards within this CIP and selected level/major category.",
+            "totasn_share" : "Non-Hispanic Asian share of reported awards within this CIP and selected level/major category.",
+            "totmen_share" : "Men's share of reported awards within this CIP and selected level/major category.",
+            "major_type" : "'first' or 'second' when selected (2001+), 'both' when combined (2001+), or 'unspecified' for 1984-2000, when MAJORNUM was not recorded.",
             "deglevel" : "Degree level of completers; options include 'assc' (Associate's), 'bach' (Bachelor's), 'mast' (Master's), and 'doct' (Doctoral)."
+        }
+    },
+    "completers": {
+        "description": "Distinct students earning any award (C*_B) or a given award level with age categories (C*_C), for reporting periods ending 2012-2025. These are people, not counts of awards by CIP or first/second majors.",
+        "years_available": [2012, 2025],
+        "endpoints": {
+            "2012": "C2012_B", "2013": "C2013_B", "2014": "C2014_B",
+            "2015": "C2015_B", "2016": "C2016_B", "2017": "C2017_B",
+            "2018": "C2018_B", "2019": "C2019_B", "2020": "C2020_B",
+            "2021": "C2021_B", "2022": "C2022_B", "2023": "C2023_B",
+            "2024": "C2024_B", "2025": "C2025_B"
+        },
+        "variables": {
+            "id": "Institutional UNITID identifier.",
+            "year": "Ending year of the July-June completion period (C2025_B is July 2024-June 2025).",
+            "period_start_year": "Starting year of the July-June completion reporting period.",
+            "source_table": "B for institution-wide unduplicated completers; C for distinct completers within each award level.",
+            "award_level": "'all_awards' for B or named associate/bachelor/master/doctoral/certificate category for C.",
+            "award_level_code": "Normalized C AWLEVELC code without leading zeroes; missing for B.",
+            "source_award_code": "Original C AWLEVELC text, including any leading zeroes; missing for B.",
+            "total_completers": "Distinct students earning an award at the given grain (CSTOTLT); do not sum B and C or C levels to count unique people.",
+            "men": "Students in the reported men/male category (CSTOTLM).",
+            "women": "Students in the reported women/female category (CSTOTLW).",
+            "american_indian": "American Indian/Alaska Native completers (CSAIANT).",
+            "asian": "Asian completers (CSASIAT).",
+            "black": "Black or African American completers (CSBKAAT).",
+            "hispanic": "Hispanic/Latino completers (CSHISPT).",
+            "pacific_islander": "Native Hawaiian or other Pacific Islander completers (CSNHPIT).",
+            "white": "White completers (CSWHITT).",
+            "two_or_more": "Completers identifying with two or more races (CS2MORT).",
+            "race_unknown": "Completers of unknown race/ethnicity (CSUNKNT).",
+            "nonresident": "Nonresident completers (CSNRALT).",
+            "age_under_18": "Completers younger than 18 (CSUND18), present only in award-level C rows.",
+            "age_18_to_24": "Completers ages 18-24 (CS18_24), present only in award-level C rows.",
+            "age_25_to_39": "Completers ages 25-39 (CS25_39), present only in award-level C rows.",
+            "age_40_plus": "Completers ages 40 or older (CSABV40), present only in award-level C rows.",
+            "age_unknown": "Completers with age unknown (CSUNKN), present only in award-level C rows.",
+            "total_completers_status": "NCES reporting/imputation flag for total_completers.",
+            "men_status": "NCES reporting/imputation flag for men.",
+            "women_status": "NCES reporting/imputation flag for women.",
+            "american_indian_status": "NCES reporting/imputation flag for american_indian.",
+            "asian_status": "NCES reporting/imputation flag for asian.",
+            "black_status": "NCES reporting/imputation flag for black.",
+            "hispanic_status": "NCES reporting/imputation flag for hispanic.",
+            "pacific_islander_status": "NCES reporting/imputation flag for pacific_islander.",
+            "white_status": "NCES reporting/imputation flag for white.",
+            "two_or_more_status": "NCES reporting/imputation flag for two_or_more.",
+            "race_unknown_status": "NCES reporting/imputation flag for race_unknown.",
+            "nonresident_status": "NCES reporting/imputation flag for nonresident.",
+            "age_under_18_status": "NCES reporting/imputation flag for age_under_18; missing in B.",
+            "age_18_to_24_status": "NCES reporting/imputation flag for age_18_to_24; missing in B.",
+            "age_25_to_39_status": "NCES reporting/imputation flag for age_25_to_39; missing in B.",
+            "age_40_plus_status": "NCES reporting/imputation flag for age_40_plus; missing in B.",
+            "age_unknown_status": "NCES reporting/imputation flag for age_unknown; missing in B."
+        }
+    },
+    "completers_by_award": {
+        "description": "Completions C award-level source files for Completers(degree_level='award_levels').",
+        "years_available": [2012, 2025],
+        "endpoints": {
+            "2012": "C2012_C", "2013": "C2013_C", "2014": "C2014_C",
+            "2015": "C2015_C", "2016": "C2016_C", "2017": "C2017_C",
+            "2018": "C2018_C", "2019": "C2019_C", "2020": "C2020_C",
+            "2021": "C2021_C", "2022": "C2022_C", "2023": "C2023_C",
+            "2024": "C2024_C", "2025": "C2025_C"
         }
     },
     "graduation": {
@@ -601,7 +668,7 @@
         },
         "variables": {
             "id" : "Institutional unique identifier ID; though UNITIDs can vary over time due to instutions splitting, this variable is generally consistent for an institution over time.", 
-            "year" : "Survey year. Note that the cohort being tracked is the cohort that started either six years back (for bachelor) or three years back (for associate).",
+            "year" : "Graduation reporting year; the bachelor's and associate's cohorts began approximately six and three years earlier, respectively.",
             "deglevel" : "Level of student degree; either 'bach' (Bachelor's) or 'assc' (Associates).",
             "totmen" : "Total number of men within an adjusted cohort.", 
             "totmen_graduated" : "Total number of men within an adjusted cohort that graduated within 150 percent of the normal time considered to graduate; for bachelor's degrees, this is six years, and for associate's degrees, this is three years.", 
@@ -636,8 +703,8 @@
         }
     },
     "cip": {
-        "description": "Provides subject field codes for subjects in a given year; should be used with Completion data; available for years 1984-2024.",
-        "years_available": [1984,2024],
+        "description": "Provides subject field codes for subjects in a given year; should be used with Completion data; available for years 1984-2025.",
+        "years_available": [1984,2025],
         "endpoints": {
             "1984": "C1984_CIP",
             "1985": "C1985_CIP",
@@ -679,10 +746,11 @@
             "2021": "C2021_A",
             "2022": "C2022_A",
             "2023": "C2023_A",
-            "2024": "C2024_A"
+            "2024": "C2024_A",
+            "2025": "C2025_A"
         },
         "variables": {
-            "year" : "Survey year. Note that the cohort being tracked is the cohort that started either six years back (for bachelor) or three years back (for associate).",
+            "year" : "Year of the Completions data dictionary supplying this CIP description; CIP meanings can change with classification revisions. This is not a graduation cohort year.",
             "cip" : "CIP (Classification of Instructional Programs) identifier code.",
             "cip_description" : "CIP subject label (e.g., Geology)."
         }

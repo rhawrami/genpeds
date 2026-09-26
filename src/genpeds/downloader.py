@@ -23,7 +23,8 @@ def get_year_iter(subject: str,
 
     :param subject: string identifying which subject data to download. The subjects available are:
      ['characteristics', 'admissions', 'enrollment', 'twelve_month_enrollment', 'retention', 'tuition',
-      'tuition_program', 'student_aid', 'veterans_aid', 'completion', 'cip', 'graduation']
+      'tuition_program', 'student_aid', 'veterans_aid', 'completion', 'completers',
+      'completers_by_award', 'cip', 'graduation']
     
     :param year_range: tuple of year integers (indicates a range), iterable of year integers (indicates group of individual years), or single year to pull data from. Retention is available for 2003-2024; other subjects have their own year ranges. Defaults to all available years for a subject.
     '''
@@ -35,6 +36,12 @@ def get_year_iter(subject: str,
             iter_range = list(range(start, end + 1))
         elif subject == 'twelve_month_enrollment':
             start, end = 2002, 2025
+            iter_range = list(range(start, end + 1))
+        elif subject in ('completion', 'cip'):
+            start, end = 1984, 2025
+            iter_range = list(range(start, end + 1))
+        elif subject in ('completers', 'completers_by_award'):
+            start, end = 2012, 2025
             iter_range = list(range(start, end + 1))
         elif subject in ('tuition', 'tuition_program'):
             start, end = 2000, 2024
@@ -77,6 +84,10 @@ def get_year_iter(subject: str,
         raise ValueError('Characteristics data is available for years 1984-2025')
     if subject == 'twelve_month_enrollment' and any(year < 2002 or year > 2025 for year in iter_range):
         raise ValueError('12-month enrollment headcounts are available for years 2002-2025')
+    if subject in ('completion', 'cip') and any(year < 1984 or year > 2025 for year in iter_range):
+        raise ValueError('Completion and CIP files are available for years 1984-2025')
+    if subject in ('completers', 'completers_by_award') and any(year < 2012 or year > 2025 for year in iter_range):
+        raise ValueError('Distinct-completer files are available for years 2012-2025')
     if subject in ('tuition', 'tuition_program') and any(year < 2000 or year > 2024 for year in iter_range):
         raise ValueError('Tuition data is available for years 2000-2024')
     if subject == 'student_aid' and any(year < 2002 or year > 2024 for year in iter_range):
@@ -171,7 +182,8 @@ def scrape_ipeds_data(subject: str = 'characteristics',
     
     :param subject: string identifying which subject data to download. The subjects available are:
      ['characteristics', 'admissions', 'enrollment', 'twelve_month_enrollment', 'retention', 'tuition',
-      'tuition_program', 'student_aid', 'veterans_aid', 'completion', 'cip', 'graduation']
+      'tuition_program', 'student_aid', 'veterans_aid', 'completion', 'completers',
+      'completers_by_award', 'cip', 'graduation']
     
     :param year_range: tuple of year integers (indicates a range), iterable of year integers (indicates group of individual years), or single year to pull data from. Retention is available for 2003-2024; other subjects have their own year ranges. Defaults to all available years for a subject.
 
@@ -195,9 +207,11 @@ def scrape_ipeds_data(subject: str = 'characteristics',
 
     - :veterans_aid: Post-9/11 GI Bill and DoD Tuition Assistance recipients and dollars, by undergraduate/graduate level, aid years ending 2014-2024 (SFAV files).
 
-    - :completion: completion of degrees by gender, level of degree and subject field (e.g., Bachelor's in Economics), with most years including completion by race and gender. Available for years 1984-2024.
+    - :completion: completion of degrees by gender, level of degree and subject field (e.g., Bachelor's in Economics), with most years including completion by race and gender. Available for years 1984-2025.
 
-    - :cip: CIP, or Classification of Instructional Programs, are key-value pairs for subject study fields. CIP's vary by year, and are relevant to identify subject field in completion data. Available for years 1984-2024.
+    - :completers: distinct people receiving any award (C*_B), 2012-2025. Use :completers_by_award: for distinct completers within each award level and age band (C*_C).
+
+    - :cip: CIP, or Classification of Instructional Programs, are key-value pairs for subject study fields. CIP's vary by year, and are relevant to identify subject field in completion data. Available for years 1984-2025.
 
     - :graduation: number of cohorts and graduates by gender, institutional level and graduation measure (e.g., students earning a bachelor's degree within 6 years of entering). Available for years 2000-2024.
     '''

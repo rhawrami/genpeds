@@ -51,7 +51,9 @@ def test_common_methods(subject_name, subject, year_range):
     # test if .year_range() returns correct ranges
     if isinstance(genpeds_class, Characteristics):
         assert genpeds_class.get_available_years() == (1984,2025)
-    elif isinstance(genpeds_class, (Enrollment, Completion)):
+    elif isinstance(genpeds_class, Completion):
+        assert genpeds_class.get_available_years() == (1984,2025)
+    elif isinstance(genpeds_class, Enrollment):
         assert genpeds_class.get_available_years() == (1984,2024) # check if returns appropriate range
     elif isinstance(genpeds_class, Admissions):
         assert genpeds_class.get_available_years() == (2001,2024)

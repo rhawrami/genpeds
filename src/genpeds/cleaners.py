@@ -174,6 +174,23 @@ E12_FIELDS = {
 }
 
 
+COMPLETERS_FIELDS = {
+    'total_completers': 'cstotlt', 'men': 'cstotlm', 'women': 'cstotlw',
+    'american_indian': 'csaiant', 'asian': 'csasiat', 'black': 'csbkaat',
+    'hispanic': 'cshispt', 'pacific_islander': 'csnhpit', 'white': 'cswhitt',
+    'two_or_more': 'cs2mort', 'race_unknown': 'csunknt',
+    'nonresident': 'csnralt',
+    'age_under_18': 'csund18', 'age_18_to_24': 'cs18_24',
+    'age_25_to_39': 'cs25_39', 'age_40_plus': 'csabv40', 'age_unknown': 'csunkn'
+}
+
+COMPLETER_AWARD_LEVELS = {
+    '2': 'certificate_1_to_4_years', '3': 'assc', '5': 'bach',
+    '7': 'mast', '9': 'doct', '10': 'postgraduate_certificate',
+    '11': 'certificate_under_12_weeks', '12': 'certificate_12_weeks_to_1_year'
+}
+
+
 def clean_characteristics(characteristics_dir: str = 'characteristicsdata',
                            year_range: Optional[Union[Tuple[int,int], List[int], int]] = None) -> pd.DataFrame:
     '''
@@ -771,15 +788,20 @@ def clean_veterans_aid(aid_dir: str = 'veterans_aiddata',
 
 
 def clean_completion(completion_dir: str = 'completiondata', 
-                     level: str = 'bach',
-                     year_range: Optional[Union[Tuple[int,int], List[int], int]] = None) -> pd.DataFrame:
+                      level: str = 'bach',
+                      year_range: Optional[Union[Tuple[int,int], List[int], int]] = None,
+                      major: str = 'both') -> pd.DataFrame:
     '''
     cleans yearly completion data and returns complete completions data
 
     :param completion_dir: directory where raw completion data is located
     :param level: level of degree, options include ['assc', 'bach', 'mast', 'doct']
     :year_range: range of years to clean data from. This is in case that you have more data than you want to actually clean and return
+    :major: 'first', 'second', or 'both'. MAJORNUM is available from 2001;
+      earlier files have no first/second-major identifier.
     '''
+    if major not in ('first', 'second', 'both'):
+        raise ValueError("major must be 'first', 'second', or 'both'")
     warnings.filterwarnings('ignore', category=FutureWarning)
     sorted_files = sorted(os.listdir(completion_dir)) # unnecessary, but helps with error checking
     rename_dict = VARIABLE_RENAME['completion']
@@ -804,8 +826,18 @@ def clean_completion(completion_dir: str = 'completiondata',
             if int(year_num) not in year_iter:
                 continue
         
-        df = pd.read_csv(file_path, dtype=str) # read in df
-        df = df.rename(str.lower, axis='columns') # some df's have all uppercase, some have all lowercase
+        df = pd.read_csv(file_path, dtype=str, index_col=False, low_memory=False,
+                         usecols=lambda c: c.lower().strip() in rename_dict or c.lower().strip() == 'majornum')
+        df.columns = df.columns.str.lower().str.strip()
+
+        if int(year_num) < 2001:
+            if major != 'both':
+                raise ValueError(f'{file}: first/second major was not identified before 2001')
+        else:
+            if 'majornum' not in df.columns:
+                raise ValueError(f'{file}: expected MAJORNUM for first/second majors')
+            if major != 'both':
+                df = df.loc[df['majornum'].str.strip() == ('1' if major == 'first' else '2')]
         
         if all(col in df.columns for col in ['crace10', 'ctotalm']):
             cols_to_filter = [col for col in rename_dict.keys() if 
@@ -816,6 +848,8 @@ def clean_completion(completion_dir: str = 'completiondata',
 
         df_filtered = df.reindex(columns=cols_to_filter)
         df_filtered = df_filtered.rename(columns=rename_dict)
+        df_filtered['id'] = df_filtered['id'].str.strip()
+        df_filtered['cip'] = df_filtered['cip'].str.strip()
         for col in df_filtered:
             if col not in ['id', 'cip']:
                 df_filtered[col] = pd.to_numeric(df_filtered[col], errors='coerce')
@@ -838,12 +872,84 @@ def clean_completion(completion_dir: str = 'completiondata',
                 completions = completions.eval(eval_str)
         
         completions['deglevel'] = level # adds level identifier
+        completions['major_type'] = (major if int(year_num) >= 2001 else 'unspecified')
         completions['year'] = int(year_num) # adds year identifier
-        completions['cip'] = completions['cip'].astype(str).str.strip()
         
         master_df = pd.concat([master_df, completions], ignore_index=True)
 
     return master_df
+
+
+def clean_completers(completers_dir: str = 'completersdata',
+                     award_dir: str = 'completers_by_awarddata',
+                     degree_level: str = 'all',
+                     year_range: Optional[Union[Tuple[int,int], List[int], int]] = None) -> pd.DataFrame:
+    '''Distinct *people* across all awards (B) or within each award level (C).
+
+    C's age and level data are not summed into B: one student can receive
+    awards at multiple levels in the same reporting period.
+    '''
+    choices = {'all', 'award_levels', 'assc', 'bach', 'mast', 'doct'}
+    if degree_level not in choices:
+        raise ValueError(f'degree_level must be one of {sorted(choices)}')
+    requested = set(get_year_iter('completers', year_range)) if year_range is not None else None
+    part = 'B' if degree_level == 'all' else 'C'
+    directory = completers_dir if part == 'B' else award_dir
+    prefix = 'completers' if part == 'B' else 'completers_by_award'
+    fields = set(COMPLETERS_FIELDS.values())
+    flags = {'x' + field for field in fields}
+    frames = []
+    found = set()
+
+    for file in sorted(os.listdir(directory)):
+        match = re.fullmatch(rf'{prefix}_(\d{{4}})\.csv', file, flags=re.IGNORECASE)
+        if not match:
+            continue
+        year = int(match.group(1))
+        if requested is not None and year not in requested:
+            continue
+        if not 2012 <= year <= 2025:
+            continue
+        cols = fields | flags | {'unitid', 'awlevelc'}
+        df = pd.read_csv(os.path.join(directory, file), dtype=str,
+                         index_col=False, low_memory=False,
+                         usecols=lambda c: c.lower().strip() in cols)
+        df.columns = df.columns.str.lower().str.strip()
+        required = {'unitid', 'cstotlt', 'cstotlm', 'cstotlw'}
+        if part == 'C':
+            required.add('awlevelc')
+        if not required.issubset(df.columns):
+            raise ValueError(f'{file} is missing completer fields: {sorted(required - set(df.columns))}')
+        df = df.reindex(columns=sorted(cols))
+        source_code = (df['awlevelc'].astype('string').str.strip() if part == 'C'
+                       else pd.Series(pd.NA, index=df.index, dtype='string'))
+        code = source_code.str.lstrip('0').replace('', pd.NA)
+        if part == 'C' and degree_level != 'award_levels':
+            wanted = {'assc': '3', 'bach': '5', 'mast': '7', 'doct': '9'}[degree_level]
+            selected = code == wanted
+            df = df.loc[selected].copy()
+            source_code = source_code.loc[selected]
+            code = code.loc[selected]
+        award = code.map(COMPLETER_AWARD_LEVELS)
+        if part == 'C' and year < 2020:
+            award = award.mask(code.eq('1').fillna(False), 'certificate_under_1_year')
+        output = pd.DataFrame({'id': df['unitid'].str.strip(), 'year': year,
+                               'period_start_year': year - 1,
+                               'source_table': part,
+                               'award_level': award if part == 'C' else 'all_awards',
+                               'award_level_code': code,
+                               'source_award_code': source_code})
+        for name, raw in COMPLETERS_FIELDS.items():
+            output[name] = pd.to_numeric(df[raw], errors='coerce')
+            output[name + '_status'] = df['x' + raw].astype('string').str.strip()
+        frames.append(output)
+        found.add(year)
+
+    if requested is not None and requested - found:
+        raise FileNotFoundError(f'Missing downloaded completer years: {sorted(requested - found)}')
+    if not frames:
+        raise FileNotFoundError(f'No completer CSV files found in {directory}')
+    return pd.concat(frames, ignore_index=True)
 
 
 def clean_cip_html(file_path: str) -> Dict[str,str]:
@@ -1002,6 +1108,7 @@ CLEANERS = {
     'student_aid' : clean_student_aid,
     'veterans_aid' : clean_veterans_aid,
     'completion' : clean_completion,
+    'completers' : clean_completers,
     'cip' : clean_cip,
     'graduation' : clean_graduation
 }

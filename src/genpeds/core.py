@@ -532,14 +532,14 @@ class Cip(IPDS):
     subject = 'cip'
 
     def __init__(self, 
-                 year_range: Optional[Union[Tuple[int,int], List[int], int]] = (1984,2024)):
+                 year_range: Optional[Union[Tuple[int,int], List[int], int]] = (1984,2025)):
         '''
         IPEDS CIP Codes data.
 
         :param year_range::
           tuple of inclusive year integers (indicates a range), iterable of year integers (indicates group of individual years), or single year to pull data from.
 
-        CIP, or Classification of Instructional Programs, are key-value pairs for subject study fields. CIP's vary by year, and are relevant to identify subject field in completion data. Available for years 1984-2024. CIP data should be used in conjunction with Completion data.
+        CIP, or Classification of Instructional Programs, are key-value pairs for subject study fields. CIP's vary by year, and are relevant to identify subject field in completion data. Available for years 1984-2025. CIP data should be used in conjunction with Completion data.
         '''
         super().__init__(year_range)
 
@@ -584,7 +584,7 @@ class Completion(IPDS):
     subject = 'completion'
 
     def __init__(self, 
-                 year_range: Optional[Union[Tuple[int,int], List[int], int]] = (1984,2024)):
+                 year_range: Optional[Union[Tuple[int,int], List[int], int]] = (1984,2025)):
         '''
         IPEDS Completion data.
         
@@ -598,7 +598,7 @@ class Completion(IPDS):
         >>> import genpeds as ed
         >>> complete_2022 = ed.Completion(year_range=2022) # one year of data
         >>> complete_2022.get_available_years()
-         (1984,2024) # available years for Enrollment data
+         (1984,2025) # available years for Completion data
         >>> complete_data = complete_2022.run() # returns Pandas dataframe
 
         ----------------
@@ -621,12 +621,14 @@ class Completion(IPDS):
     def clean(self, 
               degree_level: str = 'bach', 
               complete_dir: str = 'completiondata', 
-              rm_disk: bool = False) -> pd.DataFrame:
+              rm_disk: bool = False,
+              major: str = 'both') -> pd.DataFrame:
         '''
         cleans downloaded Completion data, returns Pandas Dataframe.
         
         :param degree_level::
          level of student degree completion; options include ['assc', 'bach', 'mast', 'doct'].
+        :param major:: 'first', 'second', or 'both' for years 2001+; before 2001 the data do not identify first/second majors.
         :param complete_dir::
           directory where raw Completion data is located; defaults to default download dir name.
         :param rm_disk::
@@ -634,6 +636,7 @@ class Completion(IPDS):
         '''
         df = CLEANERS[self.subject](completion_dir=complete_dir, 
                                     level=degree_level,
+                                    major=major,
                                     year_range=self.year_range)
         if rm_disk:
             shutil.rmtree(complete_dir)
@@ -645,11 +648,13 @@ class Completion(IPDS):
             see_progress: bool = False, 
             merge_with_char: bool = False, 
             get_cip_codes: bool = True, 
-            rm_disk: bool = False) -> pd.DataFrame:
+            rm_disk: bool = False,
+            major: str = 'both') -> pd.DataFrame:
         '''scrapes and cleans IPEDS Completion data; returns Pandas Dataframe.
         
         :param degree_level::
          level of student degree completion; options include ['assc', 'bach', 'mast', 'doct'].
+        :param major:: 'first', 'second', or 'both'. Before 2001 MAJORNUM is absent, so only 'both' is supported and marked unspecified.
 
         :param see_progress::
         (bool) When True, prints successful download confirmation for each year's data. If False, no messages printed.
@@ -663,14 +668,66 @@ class Completion(IPDS):
         :param rm_disk::
         removes downloaded Completion (and Characteristics if applicable) data from disk after data is cleaned and returned.
         '''
+        if major not in ('first', 'second', 'both'):
+            raise ValueError("major must be 'first', 'second', or 'both'")
+        if major != 'both' and any(y < 2001 for y in get_year_iter(self.subject, self.year_range)):
+            raise ValueError('First/second major is not identified before 2001; select years 2001 or later')
         self.scrape(see_progress=see_progress)
-        df = self.clean(rm_disk=rm_disk, degree_level=degree_level)
+        df = self.clean(rm_disk=rm_disk, degree_level=degree_level, major=major)
         if merge_with_char:
             char_df = Characteristics(year_range=self.year_range).run(see_progress=see_progress, rm_disk=rm_disk)
             df = _merge_characteristics(df, char_df)
         if get_cip_codes:
             cip_df = Cip(year_range=self.year_range).run(see_progress=see_progress, rm_disk=rm_disk)
             df = df.merge(cip_df, on=['cip', 'year'])
+        return df
+
+
+class Completers(IPDS):
+    '''Distinct people completing awards (not counts of awards or majors).'''
+    subject = 'completers'
+
+    def __init__(self,
+                 year_range: Optional[Union[Tuple[int,int], List[int], int]] = None):
+        '''Completions B/C files, award years ending 2012-2025.'''
+        get_year_iter(self.subject, year_range)
+        super().__init__(year_range)
+
+    def scrape(self,
+               degree_level: str = 'all',
+               see_progress: bool = False) -> None:
+        '''Download B for unique recipients across all awards, or C by level.'''
+        if degree_level not in ('all', 'award_levels', 'assc', 'bach', 'mast', 'doct'):
+            raise ValueError("degree_level must be 'all', 'award_levels', 'assc', 'bach', 'mast', or 'doct'")
+        subject = 'completers' if degree_level == 'all' else 'completers_by_award'
+        scrape_ipeds_data(subject, self.year_range, see_progress=see_progress)
+
+    def clean(self,
+              degree_level: str = 'all',
+              completers_dir: str = 'completersdata',
+              award_dir: str = 'completers_by_awarddata',
+              rm_disk: bool = False) -> pd.DataFrame:
+        '''Clean cached B or C files; optionally remove the selected cache.'''
+        df = CLEANERS[self.subject](completers_dir=completers_dir,
+                                    award_dir=award_dir,
+                                    degree_level=degree_level,
+                                    year_range=self.year_range)
+        if rm_disk:
+            shutil.rmtree(completers_dir if degree_level == 'all' else award_dir)
+        return df
+
+    def run(self,
+            degree_level: str = 'all',
+            see_progress: bool = False,
+            merge_with_char: bool = False,
+            rm_disk: bool = False) -> pd.DataFrame:
+        '''Download and clean distinct-completer data, optionally joining IC.'''
+        self.scrape(degree_level=degree_level, see_progress=see_progress)
+        df = self.clean(degree_level=degree_level, rm_disk=rm_disk)
+        if merge_with_char:
+            char_df = Characteristics(year_range=self.year_range).run(
+                see_progress=see_progress, rm_disk=rm_disk)
+            df = _merge_characteristics(df, char_df)
         return df
 
 
