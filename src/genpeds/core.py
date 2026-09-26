@@ -346,6 +346,140 @@ class Retention(IPDS):
         return df
 
 
+class Tuition(IPDS):
+    '''Published undergraduate tuition and fees, by reporting calendar.'''
+    subject = 'tuition'
+
+    def __init__(self,
+                 year_range: Optional[Union[Tuple[int,int], List[int], int]] = None):
+        '''Price years 2000-2024; accepts an inclusive tuple, list, or year.'''
+        get_year_iter(self.subject, year_range)
+        super().__init__(year_range)
+
+    def scrape(self, reporter: str = 'both', see_progress: bool = False) -> None:
+        '''Download academic-year and/or program-year price files.'''
+        if reporter not in ('academic', 'program', 'both'):
+            raise ValueError("reporter must be 'academic', 'program', or 'both'")
+        if reporter in ('academic', 'both'):
+            scrape_ipeds_data('tuition', self.year_range, see_progress=see_progress)
+        if reporter in ('program', 'both'):
+            scrape_ipeds_data('tuition_program', self.year_range, see_progress=see_progress)
+
+    def clean(self,
+              reporter: str = 'both',
+              tuition_dir: str = 'tuitiondata',
+              program_dir: str = 'tuition_programdata',
+              rm_disk: bool = False) -> pd.DataFrame:
+        '''Clean locally cached price files, optionally removing those used.'''
+        df = CLEANERS[self.subject](tuition_dir=tuition_dir,
+                                    program_dir=program_dir,
+                                    reporter=reporter,
+                                    year_range=self.year_range)
+        if rm_disk:
+            if reporter in ('academic', 'both'):
+                shutil.rmtree(tuition_dir)
+            if reporter in ('program', 'both'):
+                shutil.rmtree(program_dir)
+        return df
+
+    def run(self,
+            reporter: str = 'both',
+            see_progress: bool = False,
+            merge_with_char: bool = False,
+            rm_disk: bool = False) -> pd.DataFrame:
+        '''Download and clean price data, optionally merging Characteristics.'''
+        self.scrape(reporter=reporter, see_progress=see_progress)
+        df = self.clean(reporter=reporter, rm_disk=rm_disk)
+        if merge_with_char:
+            char_df = Characteristics(year_range=self.year_range).run(
+                see_progress=see_progress, rm_disk=rm_disk)
+            df = df.merge(char_df, on=['id', 'year'])
+        return df
+
+
+class StudentAid(IPDS):
+    '''Institution-level grants and loans from Student Financial Aid files.'''
+    subject = 'student_aid'
+
+    def __init__(self,
+                 year_range: Optional[Union[Tuple[int,int], List[int], int]] = None):
+        '''SFA aid years ending 2002-2024, as a range, list, or single year.'''
+        get_year_iter(self.subject, year_range)
+        super().__init__(year_range)
+
+    def scrape(self, see_progress: bool = False) -> None:
+        '''Download SFA, and Cost II net price for aid year 2023-24.'''
+        super().scrape(see_progress=see_progress)
+        if 2024 in get_year_iter(self.subject, self.year_range):
+            scrape_ipeds_data('student_aid_net_price', 2024,
+                              see_progress=see_progress)
+
+    def clean(self,
+              reporter: str = 'both',
+              aid_dir: str = 'student_aiddata',
+              net_price_dir: str = 'student_aid_net_pricedata',
+              rm_disk: bool = False) -> pd.DataFrame:
+        '''Clean cached SFA files; reporter is academic, program, or both.'''
+        df = CLEANERS[self.subject](aid_dir=aid_dir,
+                                    net_price_dir=net_price_dir,
+                                    reporter=reporter,
+                                    year_range=self.year_range)
+        if rm_disk:
+            shutil.rmtree(aid_dir)
+            if 2024 in get_year_iter(self.subject, self.year_range) and Path(net_price_dir).is_dir():
+                shutil.rmtree(net_price_dir)
+        return df
+
+    def run(self,
+            reporter: str = 'both',
+            see_progress: bool = False,
+            merge_with_char: bool = False,
+            rm_disk: bool = False) -> pd.DataFrame:
+        '''Download and clean aid years; optionally join Characteristics.'''
+        if reporter not in ('academic', 'program', 'both'):
+            raise ValueError("reporter must be 'academic', 'program', or 'both'")
+        self.scrape(see_progress=see_progress)
+        df = self.clean(reporter=reporter, rm_disk=rm_disk)
+        if merge_with_char:
+            char_df = Characteristics(year_range=self.year_range).run(
+                see_progress=see_progress, rm_disk=rm_disk)
+            df = df.merge(char_df, on=['id', 'year'])
+        return df
+
+
+class VeteransAid(IPDS):
+    '''Post-9/11 GI Bill and Department of Defense tuition assistance.'''
+    subject = 'veterans_aid'
+
+    def __init__(self,
+                 year_range: Optional[Union[Tuple[int,int], List[int], int]] = None):
+        '''Aid years ending 2014-2024, as an inclusive tuple, list, or year.'''
+        get_year_iter(self.subject, year_range)
+        super().__init__(year_range)
+
+    def clean(self,
+              aid_dir: str = 'veterans_aiddata',
+              rm_disk: bool = False) -> pd.DataFrame:
+        '''Clean separately reported military benefits for UG and grad students.'''
+        df = CLEANERS[self.subject](aid_dir=aid_dir, year_range=self.year_range)
+        if rm_disk:
+            shutil.rmtree(aid_dir)
+        return df
+
+    def run(self,
+            see_progress: bool = False,
+            merge_with_char: bool = False,
+            rm_disk: bool = False) -> pd.DataFrame:
+        '''Download and clean military-benefit data, with optional IC merge.'''
+        self.scrape(see_progress=see_progress)
+        df = self.clean(rm_disk=rm_disk)
+        if merge_with_char:
+            char_df = Characteristics(year_range=self.year_range).run(
+                see_progress=see_progress, rm_disk=rm_disk)
+            df = df.merge(char_df, on=['id', 'year'])
+        return df
+
+
 class Cip(IPDS):
     '''CIP Codes'''
     subject = 'cip'

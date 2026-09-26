@@ -86,6 +86,63 @@ VARIABLE_RENAME = {
 }
 
 
+TUITION_FIELDS = {
+    'academic': {
+        'tuition1': ('in_district_tuition', 'xtuit1'),
+        'fee1': ('in_district_fees', 'xfee1'),
+        'chg1ay3': ('in_district_published_tuition_fees', 'xchg1ay3'),
+        'tuition2': ('in_state_tuition', 'xtuit2'),
+        'fee2': ('in_state_fees', 'xfee2'),
+        'chg2ay3': ('in_state_published_tuition_fees', 'xchg2ay3'),
+        'tuition3': ('out_of_state_tuition', 'xtuit3'),
+        'fee3': ('out_of_state_fees', 'xfee3'),
+        'chg3ay3': ('out_of_state_published_tuition_fees', 'xchg3ay3')
+    },
+    'program': {
+        'chg1py3': ('program_published_tuition_fees', 'xchg1py3'),
+        'ciptuit1': ('largest_program_tuition_fees_no_ftft', 'xciptui1')
+    }
+}
+
+
+AID_FIELDS = {
+    'npist2': 'ftft_net_price',
+    'anyaidn': 'ftft_any_aid_count', 'anyaidp': 'ftft_any_aid_pct',
+    'fgrnt_n': 'ftft_federal_grant_count', 'fgrnt_a': 'ftft_federal_grant_avg',
+    'fgrnt_t': 'ftft_federal_grant_total',
+    'sgrnt_n': 'ftft_state_local_grant_count', 'sgrnt_a': 'ftft_state_local_grant_avg',
+    'sgrnt_t': 'ftft_state_local_grant_total',
+    'igrnt_n': 'ftft_institutional_grant_count', 'igrnt_a': 'ftft_institutional_grant_avg',
+    'igrnt_t': 'ftft_institutional_grant_total',
+    'loan_n': 'ftft_student_loan_count', 'loan_a': 'ftft_student_loan_avg',
+    'loan_t': 'ftft_student_loan_total',
+    'agrnt_n': 'ftft_grant_count', 'agrnt_a': 'ftft_grant_avg',
+    'agrnt_t': 'ftft_grant_total',
+    'pgrnt_n': 'ftft_pell_count', 'pgrnt_a': 'ftft_pell_avg',
+    'pgrnt_t': 'ftft_pell_total',
+    'floan_n': 'ftft_federal_loan_count', 'floan_a': 'ftft_federal_loan_avg',
+    'floan_t': 'ftft_federal_loan_total',
+    'uagrntn': 'ug_grant_count', 'uagrnta': 'ug_grant_avg',
+    'uagrntt': 'ug_grant_total',
+    'upgrntn': 'ug_pell_count', 'upgrnta': 'ug_pell_avg',
+    'upgrntt': 'ug_pell_total',
+    'ufloann': 'ug_federal_loan_count', 'ufloana': 'ug_federal_loan_avg',
+    'ufloant': 'ug_federal_loan_total'
+}
+
+
+VETERANS_AID_FIELDS = {
+    'ugpo9_n': 'ug_post911_count', 'ugpo9_t': 'ug_post911_total',
+    'ugpo9_a': 'ug_post911_avg',
+    'gpo9_n': 'grad_post911_count', 'gpo9_t': 'grad_post911_total',
+    'gpo9_a': 'grad_post911_avg',
+    'ugdod_n': 'ug_dod_count', 'ugdod_t': 'ug_dod_total',
+    'ugdod_a': 'ug_dod_avg',
+    'gdod_n': 'grad_dod_count', 'gdod_t': 'grad_dod_total',
+    'gdod_a': 'grad_dod_avg'
+}
+
+
 def clean_characteristics(characteristics_dir: str = 'characteristicsdata',
                           year_range: Optional[Union[Tuple[int,int], List[int], int]] = None) -> pd.DataFrame:
     '''
@@ -364,6 +421,224 @@ def clean_retention(retention_dir: str = 'retentiondata',
     return pd.concat(frames, ignore_index=True)
 
 
+def clean_tuition(tuition_dir: str = 'tuitiondata',
+                  program_dir: str = 'tuition_programdata',
+                  reporter: str = 'both',
+                  year_range: Optional[Union[Tuple[int,int], List[int], int]] = None) -> pd.DataFrame:
+    '''Harmonize published tuition/fees by institution, price year, and reporter.
+
+    Before 2024 the academic and program files are separate; COST1_2024
+    contains both. CHG*3 refers to the price year in the filename (not the
+    earlier years also included in the source's rolling charge history).
+    '''
+    if reporter not in ('academic', 'program', 'both'):
+        raise ValueError("reporter must be 'academic', 'program', or 'both'")
+    requested = set(get_year_iter('tuition', year_range)) if year_range is not None else None
+    all_fields = {raw: target for spec in TUITION_FIELDS.values()
+                  for raw, (target, _) in spec.items()}
+    flags = {flag: target + '_status' for spec in TUITION_FIELDS.values()
+             for target, flag in spec.values()}
+    output_cols = ['id', 'year', 'reporter', 'largest_program_cip',
+                   *all_fields.values(), *flags.values()]
+    frames = []
+
+    for kind, directory, prefix in (
+        ('academic', tuition_dir, 'tuition'),
+        ('program', program_dir, 'tuition_program')
+    ):
+        if reporter not in (kind, 'both'):
+            continue
+        found = set()
+        for file in sorted(os.listdir(directory)):
+            match = re.fullmatch(rf'{prefix}_(\d{{4}})\.csv', file, flags=re.IGNORECASE)
+            if not match:
+                continue
+            year = int(match.group(1))
+            if requested is not None and year not in requested:
+                continue
+            if not 2000 <= year <= 2024:
+                continue
+            df = pd.read_csv(os.path.join(directory, file), dtype=str,
+                             index_col=False, low_memory=False)
+            df.columns = df.columns.str.lower().str.strip()
+            required = {'unitid', 'chg1ay3' if kind == 'academic' else 'chg1py3'}
+            if year == 2024:
+                required.add('cipcode1')
+            if not required.issubset(df.columns):
+                raise ValueError(f'{file} is missing price fields: {sorted(required - set(df.columns))}')
+
+            if year == 2024:
+                # Cost I combines the old AY/PY tables; CIPCODE1 is -2 for
+                # academic reporters and a field-of-study code for programs.
+                is_academic = df['cipcode1'].str.strip() == '-2'
+                df = df.loc[is_academic if kind == 'academic' else ~is_academic].copy()
+            elif kind == 'program':
+                # Some early PY extracts also contain academic reporters,
+                # whose program CIP is the NCES not-applicable code -2.
+                df = df.loc[df['cipcode1'].str.strip() != '-2'].copy()
+            elif year == 2001:
+                # IC2001_AY is a universe-wide extract, including program
+                # reporters with entirely empty academic price fields.
+                academic_values = ['tuition1', 'fee1', 'chg1ay3']
+                df = df.loc[df.reindex(columns=academic_values).notna().any(axis=1)].copy()
+
+            subset = df.reindex(columns=['unitid', 'cipcode1', *all_fields, *flags])
+            subset = subset.rename(columns={'unitid': 'id', 'cipcode1': 'largest_program_cip',
+                                            **all_fields, **flags})
+            subset['id'] = subset['id'].str.strip()
+            subset['largest_program_cip'] = (subset['largest_program_cip']
+                                             .astype('string').str.strip()
+                                             .replace({'-1': pd.NA, '-2': pd.NA}))
+            for name in all_fields.values():
+                subset[name] = pd.to_numeric(subset[name], errors='coerce')
+            for name in flags.values():
+                subset[name] = subset[name].astype('string').str.strip()
+            subset.insert(1, 'year', year)
+            subset.insert(2, 'reporter', kind)
+            frames.append(subset.reindex(columns=output_cols))
+            found.add(year)
+        if requested is not None and requested - found:
+            raise FileNotFoundError(f'Missing downloaded {kind} tuition years: {sorted(requested - found)}')
+
+    if not frames:
+        raise FileNotFoundError('No tuition CSV files found for the requested reporter(s)')
+    return pd.concat(frames, ignore_index=True)
+
+
+def clean_student_aid(aid_dir: str = 'student_aiddata',
+                      net_price_dir: str = 'student_aid_net_pricedata',
+                      reporter: str = 'both',
+                      year_range: Optional[Union[Tuple[int,int], List[int], int]] = None) -> pd.DataFrame:
+    '''Clean SFA grants and loans without conflating FTFT and all-UG groups.
+
+    ``year`` is the END of the aid period (e.g. SFA2324 -> 2024), not the
+    year the file was released. The early academic/program denominator names
+    differ from the 2007-08+ common SCUGFFN/SCUGRAD fields.
+    '''
+    if reporter not in ('academic', 'program', 'both'):
+        raise ValueError("reporter must be 'academic', 'program', or 'both'")
+    requested = set(get_year_iter('student_aid', year_range)) if year_range is not None else None
+    flags = {'x' + raw: name + '_status' for raw, name in AID_FIELDS.items()}
+    frames = []
+    found = set()
+
+    for file in sorted(os.listdir(aid_dir)):
+        match = re.fullmatch(r'student_aid_(\d{4})\.csv', file, flags=re.IGNORECASE)
+        if not match:
+            continue
+        year = int(match.group(1))
+        if requested is not None and year not in requested:
+            continue
+        if not 2002 <= year <= 2024:
+            continue
+
+        df = pd.read_csv(os.path.join(aid_dir, file), dtype=str,
+                         index_col=False, low_memory=False)
+        df.columns = df.columns.str.lower().str.strip()
+        required = {'unitid', 'scfa1n', 'scfa2', 'scfy1n', 'scfy2', 'anyaidn'}
+        if not required.issubset(df.columns):
+            raise ValueError(f'{file} is missing aid fields: {sorted(required - set(df.columns))}')
+        academic = df[['scfa1n', 'scfa2']].notna().any(axis=1)
+        program = df[['scfy1n', 'scfy2']].notna().any(axis=1)
+        if (academic == program).any():
+            raise ValueError(f'{file} has ambiguous academic/program reporting rows')
+        if reporter != 'both':
+            chosen = academic if reporter == 'academic' else program
+            df = df.loc[chosen].copy()
+            academic = academic.loc[chosen]
+
+        df = df.reindex(columns=['unitid', 'scugffn', 'xscugffn', 'scugrad', 'xscugrad',
+                                 'scfa1n', 'xscfa1n', 'scfy1n', 'xscfy1n',
+                                 'scfa2', 'xscfa2', 'scfy2', 'xscfy2',
+                                 *AID_FIELDS, *flags])
+        output = pd.DataFrame({'id': df['unitid'].str.strip(), 'year': year,
+                               'aid_year_start': year - 1,
+                               'reporter': np.where(academic, 'academic', 'program')})
+        for common, fallback_academic, fallback_program, name in (
+            ('scugffn', 'scfa1n', 'scfy1n', 'ftft_students'),
+            ('scugrad', 'scfa2', 'scfy2', 'ug_students')
+        ):
+            newer = pd.to_numeric(df[common], errors='coerce')
+            older = pd.to_numeric(df[fallback_academic].where(academic, df[fallback_program]),
+                                  errors='coerce')
+            output[name] = newer.where(newer.notna(), older)
+            old_status = df['x' + fallback_academic].where(academic, df['x' + fallback_program])
+            output[name + '_status'] = df['x' + common].where(newer.notna(), old_status).astype('string').str.strip()
+
+        for raw, name in AID_FIELDS.items():
+            output[name] = pd.to_numeric(df[raw], errors='coerce')
+            output[name + '_status'] = df['x' + raw].astype('string').str.strip()
+        if year == 2024:
+            cost_path = os.path.join(net_price_dir, 'student_aid_net_price_2024.csv')
+            cost = pd.read_csv(cost_path, dtype=str, index_col=False, low_memory=False)
+            cost.columns = cost.columns.str.lower().str.strip()
+            needed = {'unitid', 'npist2', 'xnpist2'}
+            if not needed.issubset(cost.columns):
+                raise ValueError(f'{cost_path} is missing Cost II net price fields')
+            cost = cost.loc[:, ['unitid', 'npist2', 'xnpist2']]
+            cost['unitid'] = cost['unitid'].str.strip()
+            cost['npist2'] = pd.to_numeric(cost['npist2'], errors='coerce')
+            cost['xnpist2'] = cost['xnpist2'].astype('string').str.strip()
+            output = output.drop(columns=['ftft_net_price', 'ftft_net_price_status'])
+            output = output.merge(cost.rename(columns={
+                'unitid': 'id', 'npist2': 'ftft_net_price',
+                'xnpist2': 'ftft_net_price_status'
+            }), on='id', how='left', validate='one_to_one')
+        frames.append(output)
+        found.add(year)
+
+    if requested is not None and requested - found:
+        raise FileNotFoundError(f'Missing downloaded student aid years: {sorted(requested - found)}')
+    if not frames:
+        raise FileNotFoundError(f'No student aid CSV files found in {aid_dir}')
+    ordered = ['id', 'year', 'aid_year_start', 'reporter', 'ftft_students', 'ug_students',
+               *AID_FIELDS.values(), 'ftft_students_status', 'ug_students_status',
+               *(name + '_status' for name in AID_FIELDS.values())]
+    return pd.concat(frames, ignore_index=True).reindex(columns=ordered)
+
+
+def clean_veterans_aid(aid_dir: str = 'veterans_aiddata',
+                       year_range: Optional[Union[Tuple[int,int], List[int], int]] = None) -> pd.DataFrame:
+    '''Preserve undergraduate and graduate GI Bill / DoD benefit measures.'''
+    requested = set(get_year_iter('veterans_aid', year_range)) if year_range is not None else None
+    flags = {'x' + raw: name + '_status' for raw, name in VETERANS_AID_FIELDS.items()}
+    frames = []
+    found = set()
+
+    for file in sorted(os.listdir(aid_dir)):
+        match = re.fullmatch(r'veterans_aid_(\d{4})\.csv', file, flags=re.IGNORECASE)
+        if not match:
+            continue
+        year = int(match.group(1))
+        if requested is not None and year not in requested:
+            continue
+        if not 2014 <= year <= 2024:
+            continue
+        df = pd.read_csv(os.path.join(aid_dir, file), dtype=str,
+                         index_col=False, low_memory=False)
+        df.columns = df.columns.str.lower().str.strip()
+        required = {'unitid', 'ugpo9_n', 'gpo9_n', 'ugdod_n', 'gdod_n'}
+        if not required.issubset(df.columns):
+            raise ValueError(f'{file} is missing military aid fields: {sorted(required - set(df.columns))}')
+        df = df.reindex(columns=['unitid', *VETERANS_AID_FIELDS, *flags])
+        df = df.rename(columns={'unitid': 'id', **VETERANS_AID_FIELDS, **flags})
+        df['id'] = df['id'].str.strip()
+        for name in VETERANS_AID_FIELDS.values():
+            df[name] = pd.to_numeric(df[name], errors='coerce')
+        for name in flags.values():
+            df[name] = df[name].astype('string').str.strip()
+        df.insert(1, 'year', year)
+        df.insert(2, 'aid_year_start', year - 1)
+        frames.append(df)
+        found.add(year)
+
+    if requested is not None and requested - found:
+        raise FileNotFoundError(f'Missing downloaded veterans aid years: {sorted(requested - found)}')
+    if not frames:
+        raise FileNotFoundError(f'No veterans aid CSV files found in {aid_dir}')
+    return pd.concat(frames, ignore_index=True)
+
+
 def clean_completion(completion_dir: str = 'completiondata', 
                      level: str = 'bach',
                      year_range: Optional[Union[Tuple[int,int], List[int], int]] = None) -> pd.DataFrame:
@@ -591,6 +866,9 @@ CLEANERS = {
     'admissions' : clean_admissions,
     'enrollment' : clean_enrollment,
     'retention' : clean_retention,
+    'tuition' : clean_tuition,
+    'student_aid' : clean_student_aid,
+    'veterans_aid' : clean_veterans_aid,
     'completion' : clean_completion,
     'cip' : clean_cip,
     'graduation' : clean_graduation

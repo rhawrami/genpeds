@@ -2,7 +2,7 @@
 
 __version__ = '1.2.3'
 
-from genpeds.core import Characteristics, Admissions, Enrollment, Retention, Completion, Cip, Graduation
+from genpeds.core import Characteristics, Admissions, Enrollment, Retention, Tuition, StudentAid, VeteransAid, Completion, Cip, Graduation
 from genpeds.downloader import scrape_ipeds_data
 
 __all__ = [
@@ -10,6 +10,9 @@ __all__ = [
     'Admissions',
     'Enrollment', 
     'Retention',
+    'Tuition',
+    'StudentAid',
+    'VeteransAid',
     'Completion',
     'Cip',
     'Graduation',

@@ -1,15 +1,16 @@
 # genpeds
-A Python package for working with NCES IPEDS data, particularly for studying trends by gender.
+A Python package for downloading and harmonizing NCES IPEDS institution-level data.
 
 The Integrated Postsecondary Education Data System ([IPEDS](https://nces.ed.gov/ipeds/about-ipeds)), run by the National Center for Education Statistics ([NCES](https://nces.ed.gov/)), is a collection of surveys annually conducted on a range of subjects, from finances and admissions to enrollment and graduation. All postsecondary institutions that participate in federal student aid financial aid programs are required to participate in these surveys.
 
 Per [IPEDS](https://nces.ed.gov/ipeds/about-ipeds):
 > "IPEDS provides basic data needed to describe — and analyze trends in — postsecondary education in the United States, in terms of the numbers of students enrolled, staff employed, dollars expended, and degrees earned. Congress, federal agencies, state governments, education providers, professional associations, private businesses, media, students and parents, and others rely on IPEDS data for this basic information on postsecondary institutions." 
 
-`genpeds`, or the **[gen]dered [p]ostsecondary [education] [d]ata [s]atrap**, provides a Python API for requesting, and cleaning IPEDS data for a host of subjects, particularly for studying college trends by gender.
+`genpeds`, or the **[gen]dered [p]ostsecondary [education] [d]ata [s]atrap**, provides a Python API for downloading and cleaning IPEDS data across subjects, including measures without a gender breakdown.
 
 ## Recent Updates
 Support for 2024 data has been added.
+Tuition, StudentAid, and VeteransAid now provide institutional price and aid data.
 
 ## Usage
 
@@ -33,9 +34,9 @@ scrape_ipeds_data(subject='characteristics',
 # if see_progress==True, download confirmation statements will be printed
 
 # for year_range param, you can pass (inclusive) tuple range, list of years, or single year
-# ex. download enrollment data for 1980/1990 and 2015/2016:
+# ex. download enrollment data for 1984/1990 and 2015/2016:
 scrape_ipeds_data(subject='enrollment', 
-                  year_range=[1980,1990,2015,2016],
+                  year_range=[1984,1990,2015,2016],
                   see_progress=True)
 # download completion data for 1990
 scrape_ipeds_data(subject='completion', 
@@ -99,11 +100,11 @@ IPEDS [covers](https://nces.ed.gov/ipeds/about-ipeds) eight main subjects:
 5. Student Persistence and Success
 6. Institutional Prices
 7. Student Financial Aid
-8. institutional Resources including Human, resources, Finance, and Academic Libraries
+8. Institutional Resources including Human Resources, Finance, and Academic Libraries
 
-`genpeds` currently ***supports the first five*** subjects:
+`genpeds` supports selected data from the first seven subject areas. Finance, Human Resources, and Academic Libraries remain to be added:
 
-- **Characteristics** (e.g., school name, address, longitude/latitude, etc.) (available 1984-2023)
+- **Characteristics** (e.g., school name, address, longitude/latitude, etc.) (available 1984-2024)
 ```python
 from genpeds import scrape_ipeds_data, Characteristics
 
@@ -114,7 +115,7 @@ chardat = Characteristics(year_range=(1984,2023))
 
 char_df = chardat.run(rm_disk=False)
 ```
-- **Admissions** (e.g., SAT/ACT scores, admit rates by gender, etc.) (available 2001-2023)
+- **Admissions** (e.g., SAT/ACT scores, admit rates by gender, etc.) (available 2001-2024)
 ```python
 from genpeds import scrape_ipeds_data, Admissions
 
@@ -126,7 +127,7 @@ admdat = Admissions(year_range=(2001,2023))
 adm_df = admdat.run(merge_with_char=True,
                     rm_disk=True)
 ```
-- **Enrollment** (e.g., enrollment by race/gender/level, etc.) (available 1984-2023)
+- **Enrollment** (e.g., enrollment by race/gender/level, etc.) (available 1984-2024)
 ```python
 from genpeds import scrape_ipeds_data, Enrollment
 
@@ -164,7 +165,48 @@ The year-specific [Fall Enrollment D files and dictionaries](https://nces.ed.gov
 | 2016–2024 | Adds study-abroad inclusions to the adjusted cohort calculation. |
 
 The cleaner trims raw header whitespace (including a trailing space on an early `RET_PCP` column) and keeps the published rates rather than recomputing rounded percentages from counts. Status flags distinguish reported (`R`), not-applicable (`A`), blank (`B`), implied-zero (`Z`), and other corrected or imputed values; consult the dictionary for a given year before interpreting its flags. `year` refers to the retention measurement fall, **not** the fall when the students entered.
-- **Completion** (e.g., degree completion by race/gender/subject/level, etc.) (available 1984-2023)
+- **Tuition** (published undergraduate tuition and required fees, 2000–2024)
+```python
+from genpeds import Tuition
+
+prices = Tuition(year_range=[2000, 2010, 2024])
+price_df = prices.run(reporter='both', merge_with_char=True, rm_disk=False)
+
+# Or download/clean one reporting calendar at a time:
+academic_df = prices.run(reporter='academic')
+program_df = prices.run(reporter='program')
+```
+
+`reporter` is `'academic'`, `'program'`, or `'both'` (default). The result has one row per institution, price year, and reporting calendar. `year=2024` refers to published **2024–25** prices, not to an annual total of earlier price snapshots in the ZIP. Academic-year reporters have in-district/in-state/out-of-state tuition, required fees, and published tuition-plus-fees columns. Program-year reporters have published tuition-plus-fees for their largest program, its CIP code, and a separate `largest_program_tuition_fees_no_ftft` measure (available from 2006) for institutions without full-time first-time undergraduates. These measures are not interchangeable with net price after financial aid. Each numeric price has a `_status` flag; missing fields remain missing. Data come from `IC*_AY/PY` through 2023 and `COST1_2024` in 2024. Downloads are cached in `tuitiondata/` and `tuition_programdata/` according to `reporter`; `rm_disk=True` removes the selected cache directories after cleaning.
+
+The 2001 IC price extracts unusually include non-reporters in both files: the cleaner removes academic rows without academic price values and program rows whose largest-program CIP is the NCES not-applicable code `-2`. In 2024, the Cost I file combines both groups; the cleaner uses that same program-code marker to separate them. A blank price and a price of zero are different, and the published tuition-plus-fees value is kept as reported rather than calculated by adding the separately defined tuition and fee fields.
+- **StudentAid** (SFA grants, loans and net price; aid years ending 2002–2024)
+```python
+from genpeds import StudentAid
+
+aid = StudentAid(year_range=[2002, 2009, 2024])
+aid_df = aid.run(reporter='both', merge_with_char=True, rm_disk=False)
+
+# Filter the SFA academic-year or program-year cohort if needed:
+program_aid = aid.run(reporter='program')
+```
+
+`year=2024` denotes the **2023–24 aid period**, not the 2024–25 aid period. `reporter` is `'academic'`, `'program'`, or `'both'` (default). `ftft_*` columns measure aid for full-time first-time degree/certificate-seeking undergraduates; `ug_*` columns describe **all** undergraduates. The two groups have different denominators (`ftft_students`, `ug_students`) and must not be pooled. Federal/state/institutional grant and student-loan counts and averages for FTFT students are available throughout 2002–2024; combined/Pell/federal-loan breakdowns begin in 2008, and all-undergraduate grant/Pell/federal-loan measures and dollar totals generally begin in 2009. Amounts are nominal dollars, and `*_avg` fields are averages among recipients, not all enrolled students. NCES changed some reporting wording from *received* to *awarded* over time; the original reporting/imputation codes are preserved in matching `_status` fields. Missing earlier fields remain missing rather than zero.
+
+The cleaner uses `SCFA1N`/`SCFA2` for early academic-year reporters and `SCFY1N`/`SCFY2` for early full-year program reporters, then uses the common `SCUGFFN`/`SCUGRAD` financial-aid-cohort fields when present. The NCES-published `ftft_any_aid_pct` is retained as reported rather than recalculated from the cohort counts. `ftft_student_loan_*` includes nonfederal student loans where reported; `ftft_federal_loan_*` is the distinct federal subset. Grant categories can overlap at the recipient level and should not be summed as unique people.
+
+`ftft_net_price` is the NCES average cost of attendance **after** qualifying grants for in-state/in-district FTFT grant recipients (not published tuition or an individual student's price). It begins in aid year 2008–09: through 2022–23 it comes from SFA, and for 2023–24 from `COST2_2024`. Calling `StudentAid(2024).scrape()` therefore caches two sources in `student_aiddata/` and `student_aid_net_pricedata/`; `run(rm_disk=True)` removes both after cleaning. These data are institution aggregates and have no student-level or gender split.
+
+- **VeteransAid** (separate SFA veteran and military-benefit files; aid years ending 2014–2024)
+```python
+from genpeds import VeteransAid
+
+benefits_df = VeteransAid((2014, 2024)).run(merge_with_char=True)
+# E.g. grad_post911_count, ug_post911_total, grad_dod_avg
+```
+
+This separate class keeps institutions with **graduate-only** GI Bill or DoD Tuition Assistance recipients that are absent from the main SFA file. It provides recipient counts, total dollars, averages and `_status` flags by undergraduate/graduate level and benefit program. Award amounts represent benefits known to the institution, not every benefit a student may have received. Data are cached in `veterans_aiddata/`. For both aid classes, merging Characteristics uses the aid period's ending year as `year`; institutional characteristics are a snapshot from that year rather than the same aid-period measure.
+- **Completion** (e.g., degree completion by race/gender/subject/level, etc.) (available 1984-2024)
 ```python
 from genpeds import scrape_ipeds_data, Completion
 
@@ -178,7 +220,7 @@ complete_df = completedat.run(degree_level='doct',
                               merge_with_char=True,
                               rm_disk=False)
 ```
-- **Graduation** (e.g., graduation rate by race/gender/level, etc.) (available 2000-2023)
+- **Graduation** (e.g., graduation rate by race/gender/level, etc.) (available 2000-2024)
 ```python
 from genpeds import scrape_ipeds_data, Graduation
 
@@ -191,7 +233,7 @@ grad_df = graddat.run(degree_level='bach',
                       merge_with_char=True)
 ```
 
-In the future, the remaining subjects will likely be added to `genpeds`. But just with the already provided subjects, you can study school-level trends for their male and female students, from admissions to completion.
+These classes support institution-level trends across admissions, enrollment, persistence, completions, prices, and aid. Further IPEDS subjects and additional fields within existing subjects can be added over time.
 
 ## Development Installation
 

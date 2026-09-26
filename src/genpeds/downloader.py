@@ -22,14 +22,26 @@ def get_year_iter(subject: str,
     get year iterable based on subject and year input
 
     :param subject: string identifying which subject data to download. The subjects available are:
-     ['characteristics', 'admissions', 'enrollment', 'retention', 'completion', 'cip', 'graduation']
+     ['characteristics', 'admissions', 'enrollment', 'retention', 'tuition',
+      'tuition_program', 'student_aid', 'veterans_aid', 'completion', 'cip', 'graduation']
     
     :param year_range: tuple of year integers (indicates a range), iterable of year integers (indicates group of individual years), or single year to pull data from. Retention is available for 2003-2024; other subjects have their own year ranges. Defaults to all available years for a subject.
     '''
     subject = subject.lower()
 
     if not year_range:
-        if subject == 'retention':
+        if subject in ('tuition', 'tuition_program'):
+            start, end = 2000, 2024
+            iter_range = list(range(start, end + 1))
+        elif subject == 'student_aid_net_price':
+            iter_range = [2024]
+        elif subject == 'veterans_aid':
+            start, end = 2014, 2024
+            iter_range = list(range(start, end + 1))
+        elif subject == 'student_aid':
+            start, end = 2002, 2024
+            iter_range = list(range(start, end + 1))
+        elif subject == 'retention':
             start, end = 2003, 2024
             iter_range = list(range(start, end + 1))
         elif subject == 'graduation':
@@ -55,6 +67,14 @@ def get_year_iter(subject: str,
     
     if subject == 'retention' and any(year < 2003 or year > 2024 for year in iter_range):
         raise ValueError('Retention data is available for years 2003-2024')
+    if subject in ('tuition', 'tuition_program') and any(year < 2000 or year > 2024 for year in iter_range):
+        raise ValueError('Tuition data is available for years 2000-2024')
+    if subject == 'student_aid' and any(year < 2002 or year > 2024 for year in iter_range):
+        raise ValueError('Student aid data is available for aid years ending 2002-2024')
+    if subject == 'student_aid_net_price' and any(year != 2024 for year in iter_range):
+        raise ValueError('Cost II net price supplement is available for aid year 2024')
+    if subject == 'veterans_aid' and any(year < 2014 or year > 2024 for year in iter_range):
+        raise ValueError('Veterans aid data is available for aid years ending 2014-2024')
 
     return iter_range
 
@@ -140,7 +160,8 @@ def scrape_ipeds_data(subject: str = 'characteristics',
     downloads NCES IPEDS data on specified years for a defined subject.
     
     :param subject: string identifying which subject data to download. The subjects available are:
-     ['characteristics', 'admissions', 'enrollment', 'retention', 'completion', 'cip', 'graduation']
+     ['characteristics', 'admissions', 'enrollment', 'retention', 'tuition',
+      'tuition_program', 'student_aid', 'veterans_aid', 'completion', 'cip', 'graduation']
     
     :param year_range: tuple of year integers (indicates a range), iterable of year integers (indicates group of individual years), or single year to pull data from. Retention is available for 2003-2024; other subjects have their own year ranges. Defaults to all available years for a subject.
 
@@ -155,6 +176,12 @@ def scrape_ipeds_data(subject: str = 'characteristics',
     - :enrollment: fall enrollment by gender and institutional level (e.g., 4-year undergraduate program), with most years including enrollment by race and gender. Available for years 1984-2024.
 
     - :retention: first-year full-time and part-time undergraduate retention rates and (from 2007) cohort counts. Available for years 2003-2024 in the Fall Enrollment D files.
+
+    - :tuition: published academic-year tuition and fees (IC academic-year files through 2023, Cost I in 2024). Use :tuition_program: for program-year reporters; available for 2000-2024.
+
+    - :student_aid: SFA counts and amounts, indexed by the ending year of the aid period, 2002-2024 (SFA0102 to SFA2324).
+
+    - :veterans_aid: Post-9/11 GI Bill and DoD Tuition Assistance recipients and dollars, by undergraduate/graduate level, aid years ending 2014-2024 (SFAV files).
 
     - :completion: completion of degrees by gender, level of degree and subject field (e.g., Bachelor's in Economics), with most years including completion by race and gender. Available for years 1984-2024.
 
