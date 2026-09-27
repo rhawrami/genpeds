@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "genpeds"
-description = "Work with NCES IPEDS data: from admissions to graduation"
+description = "Download and harmonize NCES IPEDS institution-level data"
 requires-python = ">=3.9"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",
 ]
-version = "1.2.3"
+version = "1.3.0"
 authors = [{"name" = "Ravan Hawrami", "email" = "ravanhawrami@gmail.com"}]
 readme = {"file" = "README.md", content-type = "text/markdown"}
 dependencies = ["pandas", "numpy", "openpyxl", "xlrd", "requests", "bs4", "us"]
